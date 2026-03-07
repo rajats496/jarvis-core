@@ -80,9 +80,9 @@ export default function Register() {
   return (
     <div className="auth-page-wrapper" style={{
       minHeight: '100vh',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
       background: 'linear-gradient(160deg, #0D1018 0%, #090B12 55%, #060709 100%)',
-      padding: '24px 16px',
+      padding: '5vh 16px',
       fontFamily: "'Rajdhani', sans-serif",
       position: 'relative', overflowY: 'auto', overflowX: 'hidden',
     }}>
