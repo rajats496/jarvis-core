@@ -135,19 +135,36 @@ body::after {
     overflow: auto;
   }
 
-  /* Header compact */
+  /* Header height: compact on mobile */
   .jarvis-header {
+    height: 52px !important;
     padding: 0 0.75rem !important;
   }
 
-  /* Hide AI badge text on very small screens */
-  .jarvis-ai-badge-text {
-    display: none;
+  /* Hide AI badge text, chevron, and button labels on mobile */
+  .jarvis-ai-badge-text,
+  .header-chevron,
+  .header-btn-label {
+    display: none !important;
+  }
+
+  /* AI badge: dot-only, tighter */
+  .jarvis-ai-badge {
+    padding: 4px 8px !important;
   }
 
   /* Header title — slightly smaller */
   .jarvis-title-text {
     font-size: 11px !important;
+  }
+
+  /* Clear Chat + Logout: icon-only square buttons */
+  .header-clear-btn,
+  .header-logout-btn {
+    width: 34px !important;
+    height: 34px !important;
+    padding: 0 !important;
+    justify-content: center !important;
   }
 
   /* Make buttons touch-friendly */

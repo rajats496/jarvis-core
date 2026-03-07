@@ -38,7 +38,7 @@ export default function JarvisHeader({ user, onLogout, sidebarCollapsed, onToggl
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={titleStyle} className="jarvis-title-text">Jarvis AI Assistant</span>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4A5568" strokeWidth="2.5" strokeLinecap="round">
+          <svg className="header-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4A5568" strokeWidth="2.5" strokeLinecap="round">
             <path d="M6 9l6 6 6-6" />
           </svg>
         </div>
@@ -162,6 +162,8 @@ export default function JarvisHeader({ user, onLogout, sidebarCollapsed, onToggl
           type="button"
           onClick={onClearChat}
           style={clearChatBtnStyle}
+          className="header-clear-btn"
+          title="Clear Chat"
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(184,196,216,0.12)'; e.currentTarget.style.borderColor = 'rgba(200,216,240,0.32)'; e.currentTarget.style.color = '#EEF2FF'; }}
           onMouseLeave={e => { e.currentTarget.style.background = 'rgba(184,196,216,0.06)'; e.currentTarget.style.borderColor = 'rgba(180,200,230,0.18)'; e.currentTarget.style.color = '#B8C4D8'; }}
         >
@@ -170,12 +172,14 @@ export default function JarvisHeader({ user, onLogout, sidebarCollapsed, onToggl
             <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
             <path d="M10 11v6M14 11v6" />
           </svg>
-          Clear Chat
+          <span className="header-btn-label">Clear Chat</span>
         </button>
         <button
           type="button"
           onClick={onLogout}
           style={logoutBtnStyle}
+          className="header-logout-btn"
+          title="Logout"
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#B8C4D8'; }}
           onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#2E3545'; }}
         >
@@ -184,7 +188,7 @@ export default function JarvisHeader({ user, onLogout, sidebarCollapsed, onToggl
             <polyline points="16 17 21 12 16 7"/>
             <line x1="21" y1="12" x2="9" y2="12"/>
           </svg>
-          Logout
+          <span className="header-btn-label">Logout</span>
         </button>
       </div>
     </header>
