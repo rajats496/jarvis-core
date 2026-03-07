@@ -273,7 +273,7 @@ export default function SettingsPanel() {
   const isInitialLoading = loading && (!contextSettings || Object.keys(contextSettings).length === 0);
 
   return (
-    <div style={{
+    <div className="settings-panel" style={{
       display: 'flex',
       flexDirection: 'row',
       height: '100%',
@@ -285,7 +285,7 @@ export default function SettingsPanel() {
     }}>
 
       {/* ══ LEFT SIDEBAR ══ */}
-      <div style={{
+      <div className="settings-sidebar" style={{
         width: 210, minWidth: 210,
         background: C.sidebar,
         borderRight: `1px solid ${C.border}`,

@@ -256,7 +256,7 @@ export default function RemindersPanel() {
   });
 
   return (
-    <div style={{
+    <div className="reminders-panel" style={{
       display: 'flex',
       flexDirection: 'row',
       height: '100%',
@@ -268,7 +268,7 @@ export default function RemindersPanel() {
     }}>
 
       {/* ══ LEFT SIDEBAR ══ */}
-      <div style={{
+      <div className="reminders-sidebar" style={{
         width: 210, minWidth: 210,
         background: C.sidebar,
         borderRight: `1px solid ${C.border}`,

@@ -169,7 +169,7 @@ export default function VMPanel() {
   const handleSubmit = (e) => { e.preventDefault(); runCommand(); };
 
   return (
-    <div style={{
+    <div className="commands-panel" style={{
       display: 'flex',
       flexDirection: 'row',
       height: '100%',
@@ -181,7 +181,7 @@ export default function VMPanel() {
     }}>
 
       {/* ══ LEFT SIDEBAR ══ */}
-      <div style={{
+      <div className="commands-sidebar" style={{
         width: 230, minWidth: 230,
         background: C.sidebar,
         borderRight: `1px solid ${C.border}`,

@@ -147,7 +147,7 @@ export default function UsageStats() {
   const maxVal  = entries.reduce((m, [, v]) => Math.max(m, v), 0);
 
   return (
-    <div style={{
+    <div className="analytics-panel" style={{
       display: 'flex',
       flexDirection: 'row',
       height: '100%',
@@ -159,7 +159,7 @@ export default function UsageStats() {
     }}>
 
       {/* ══ LEFT SIDEBAR ══ */}
-      <div style={{
+      <div className="analytics-sidebar" style={{
         width: 210, minWidth: 210,
         background: C.sidebar,
         borderRight: `1px solid ${C.border}`,
@@ -338,7 +338,7 @@ export default function UsageStats() {
 
           {/* stat card grid */}
           {!loading && entries.length > 0 && (
-            <div style={{
+            <div className="analytics-stat-grid" style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(2, 1fr)',
               gap: 10,

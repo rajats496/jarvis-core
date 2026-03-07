@@ -233,6 +233,34 @@ body::after {
     border-bottom: 1px solid rgba(184,196,216,0.09) !important;
     flex-shrink: 0 !important;
   }
+
+  /* ── REMINDERS / ACTIVITY / SETTINGS / ANALYTICS / COMMANDS ── */
+  /* All share the same sidebar-stacking pattern */
+  .reminders-panel,
+  .activity-panel,
+  .settings-panel,
+  .analytics-panel,
+  .commands-panel {
+    flex-direction: column !important;
+  }
+  .reminders-sidebar,
+  .activity-sidebar,
+  .settings-sidebar,
+  .analytics-sidebar,
+  .commands-sidebar {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-height: 220px !important;
+    overflow-y: auto !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(184,196,216,0.09) !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Analytics stat grid: 1 column on mobile */
+  .analytics-stat-grid {
+    grid-template-columns: 1fr !important;
+  }
   .memory-panel {
     flex-direction: column !important;
   }

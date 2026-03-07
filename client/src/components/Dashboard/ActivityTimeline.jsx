@@ -235,7 +235,7 @@ export default function ActivityTimeline() {
   });
 
   return (
-    <div style={{
+    <div className="activity-panel" style={{
       display: 'flex',
       flexDirection: 'row',
       height: '100%',
@@ -247,7 +247,7 @@ export default function ActivityTimeline() {
     }}>
 
       {/* ══ LEFT SIDEBAR ══ */}
-      <div style={{
+      <div className="activity-sidebar" style={{
         width: 210, minWidth: 210,
         background: C.sidebar,
         borderRight: `1px solid ${C.border}`,
