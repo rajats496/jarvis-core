@@ -119,6 +119,12 @@ body::after {
   }
 }
 
+/* Mobile-only hint blocks hidden by default on desktop */
+.goals-voice-hint-mobile,
+.reminders-voice-hint-mobile {
+  display: none;
+}
+
 /* ═══════════════════════════════════════════════════════
    RESPONSIVE — MOBILE (≤ 768px)
    Show hamburger, compact layout
@@ -264,6 +270,15 @@ body::after {
   /* Hide the flex spacer so the voice hint is visible without scrolling */
   .goals-spacer {
     display: none !important;
+  }
+  /* Hide sidebar hints (buried below fold); show mobile-injected copies instead */
+  .goals-voice-hint,
+  .reminders-voice-hint {
+    display: none !important;
+  }
+  .goals-voice-hint-mobile,
+  .reminders-voice-hint-mobile {
+    display: block !important;
   }
 
   /* Analytics stat grid: 1 column on mobile */

@@ -384,7 +384,7 @@ export default function RemindersPanel() {
         <div style={{ flex: 1 }} />
 
         {/* tip + test button */}
-        <div style={{
+        <div className="reminders-voice-hint" style={{
           background: 'rgba(184,196,216,0.06)',
           border: '1px solid rgba(184,196,216,0.14)',
           borderRadius: 8,
@@ -551,6 +551,26 @@ export default function RemindersPanel() {
               onDismiss={handleDismiss}
             />
           ))}
+
+          {/* Voice/Chat hint — mobile only, always visible below list */}
+          <div className="reminders-voice-hint-mobile" style={{
+            marginTop: 10,
+            background: 'rgba(184,196,216,0.06)',
+            border: '1px solid rgba(184,196,216,0.14)',
+            borderRadius: 8,
+            padding: '10px 12px',
+            fontSize: 11,
+            color: C.muted,
+            lineHeight: 1.7,
+            flexShrink: 0,
+          }}>
+            <div style={{ color: '#B8C4D8', fontWeight: 600, marginBottom: 4 }}>💬 Voice / Chat commands</div>
+            <div style={{ marginBottom: 2 }}>• <span style={{color:'#CBD5E1'}}>"Remind me at 7 PM to study MongoDB"</span></div>
+            <div style={{ marginBottom: 2 }}>• <span style={{color:'#CBD5E1'}}>"Show my reminders"</span></div>
+            <div style={{ marginBottom: 2 }}>• <span style={{color:'#CBD5E1'}}>"Remind me tomorrow at 9 AM to call X"</span></div>
+            <div style={{ marginBottom: 2 }}>• <span style={{color:'#CBD5E1'}}>"Delete reminder 1"</span></div>
+            <div>• <span style={{color:'#CBD5E1'}}>"Cancel all reminders"</span></div>
+          </div>
         </div>
       </div>
     </div>

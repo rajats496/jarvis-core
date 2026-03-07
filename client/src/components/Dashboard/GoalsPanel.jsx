@@ -437,8 +437,8 @@ export default function GoalsPanel() {
         {/* spacer — hidden on mobile so hint stays visible */}
         <div className="goals-spacer" style={{ flex: 1 }} />
 
-        {/* hint */}
-        <div style={{
+        {/* hint — hidden on mobile (shown below card grid instead) */}
+        <div className="goals-voice-hint" style={{
           background: 'rgba(184,196,216,0.06)',
           border: '1px solid rgba(184,196,216,0.14)',
           borderRadius: 8,
@@ -566,6 +566,25 @@ export default function GoalsPanel() {
               })}
             </div>
           )}
+
+          {/* Voice/Chat hint — mobile only, always visible below content */}
+          <div className="goals-voice-hint-mobile" style={{
+            marginTop: 14,
+            background: 'rgba(184,196,216,0.06)',
+            border: '1px solid rgba(184,196,216,0.14)',
+            borderRadius: 8,
+            padding: '10px 12px',
+            fontSize: 11,
+            color: C.muted,
+            lineHeight: 1.7,
+          }}>
+            <div style={{ color: '#B8C4D8', fontWeight: 600, marginBottom: 4 }}>💬 Voice / Chat commands</div>
+            <div style={{ marginBottom: 2 }}>• <span style={{color:'#CBD5E1'}}>&quot;My goal is to learn X in 30 days&quot;</span></div>
+            <div style={{ marginBottom: 2 }}>• <span style={{color:'#CBD5E1'}}>&quot;Show my goals&quot;</span></div>
+            <div style={{ marginBottom: 2 }}>• <span style={{color:'#CBD5E1'}}>&quot;Mark goal 1 achieved&quot;</span></div>
+            <div style={{ marginBottom: 2 }}>• <span style={{color:'#CBD5E1'}}>&quot;Log 5 days for goal 2&quot;</span></div>
+            <div>• <span style={{color:'#CBD5E1'}}>&quot;Delete goal 2&quot;</span></div>
+          </div>
         </div>
       </div>
     </div>
