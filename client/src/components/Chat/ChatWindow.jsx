@@ -353,14 +353,14 @@ export default function ChatWindow({ onMemoryUpdate, clearChatTrigger, quickMess
   return (
     <div style={containerStyle}>
       {/* Topbar */}
-      <div style={headerStyle}>
+      <div style={headerStyle} className="chat-topbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={badge('AI', lastSource === 'ai')}>AI</span>
           <span style={badge('Memory', lastSource === 'memory')}>Memory</span>
           <span style={badge('Fallback', lastSource === 'fallback')}>Fallback</span>
         </div>
       </div>
-      <div style={messagesStyle}>
+      <div style={messagesStyle} className="chat-messages-area">
         {isEmpty && (
           <div style={emptyWrapStyle}>
             {/* Jarvis Holographic Avatar */}
@@ -456,7 +456,7 @@ export default function ChatWindow({ onMemoryUpdate, clearChatTrigger, quickMess
       </div>
 
       {/* Quick action pills */}
-      <div style={quickRowStyle}>
+      <div style={quickRowStyle} className="chat-quick-row">
         {['Check CPU', 'Show Memories', 'Run Diagnostics', 'View Analytics'].map(a => (
           <button
             key={a}

@@ -4,7 +4,7 @@
  */
 export default function JarvisAvatar({ size = 180 }) {
   return (
-    <div style={{ ...wrapStyle, width: size, height: size }}>
+    <div className="jarvis-avatar-wrap" style={{ ...wrapStyle, width: size, height: size }}>
       {/* Outer octagon clip frame — pulsing */}
       <div style={outerFrameStyle} />
 
