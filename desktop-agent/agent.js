@@ -190,16 +190,41 @@ async function startTunnel() {
 }
 
 function printManualInstructions() {
-    console.log('\nℹ️  No tunnel configured. To expose this agent to the internet:');
-    console.log('   Option A — Ngrok (recommended):');
-    console.log('     1. Get a free token at https://ngrok.com');
-    console.log('     2. Edit start.bat and set: NGROK_AUTHTOKEN=your_token');
-    console.log('     3. Run: npm install @ngrok/ngrok');
     console.log('');
-    console.log('   Option B — Manual Ngrok (no config):');
-    console.log(`     Run in a new terminal: ngrok http ${PORT}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('  ⚠️  AGENT IS RUNNING — BUT NOT ACCESSIBLE FROM JARVIS YET');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('');
-    console.log('   Then paste the printed URL into: Jarvis Dashboard → Settings → Personal VM URL\n');
+    console.log('  To connect this agent to your Jarvis website, you need');
+    console.log('  a FREE "tunnel" — think of it as a bridge from the internet');
+    console.log('  to this computer. We use Ngrok for this.');
+    console.log('');
+    console.log('  ── STEP 1: Create a FREE Ngrok account ─────────────');
+    console.log('  → Go to: https://ngrok.com  and click Sign Up');
+    console.log('  → It is completely free, no credit card needed');
+    console.log('');
+    console.log('  ── STEP 2: Get your personal token ─────────────────');
+    console.log('  → After logging in, go to:');
+    console.log('    https://dashboard.ngrok.com/get-started/your-authtoken');
+    console.log('  → Copy the long token shown on that page');
+    console.log('');
+    console.log('  ── STEP 3: Save your token in start.bat ─────────────');
+    console.log('  → Open start.bat in Notepad');
+    console.log('  → Find the line:  set NGROK_AUTHTOKEN=');
+    console.log('  → Paste your token after the = sign, like this:');
+    console.log('    set NGROK_AUTHTOKEN=2abc123yourtoken...');
+    console.log('  → Save the file');
+    console.log('');
+    console.log('  ── STEP 4: Install Ngrok package (one time only) ────');
+    console.log('  → In this terminal, run:  npm install @ngrok/ngrok');
+    console.log('');
+    console.log('  ── STEP 5: Restart the agent ─────────────────────');
+    console.log('  → Double-click start.bat again');
+    console.log('  → A URL will appear here — copy and paste it into');
+    console.log('    Jarvis Dashboard → Settings → Personal VM URL');
+    console.log('');
+    console.log('  📖 See SETUP.md for full picture instructions.');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 }
 
 // ─── Start ───────────────────────────────────────────────────────────────────
