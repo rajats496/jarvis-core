@@ -213,7 +213,8 @@ body::after {
   }
   .tasks-sidebar {
     width: 100% !important;
-    max-height: 220px !important;
+    min-width: 0 !important;
+    max-height: 180px !important;
     overflow-y: auto !important;
     border-right: none !important;
     border-bottom: 1px solid rgba(184,196,216,0.09) !important;
