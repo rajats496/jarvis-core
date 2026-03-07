@@ -263,6 +263,37 @@ body::after {
   }
   /* commands-panel / commands-sidebar — mobile handled by VMPanel JSX directly */
 
+  /* ── STATUS TAB ── */
+  .status-panel {
+    flex-direction: column !important;
+  }
+  .status-sidebar {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-height: 180px !important;
+    overflow-y: auto !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(184,196,216,0.09) !important;
+    flex-shrink: 0 !important;
+  }
+  .status-stat-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* ── SEARCH TAB ── */
+  .search-panel {
+    flex-direction: column !important;
+  }
+  .search-sidebar {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-height: 180px !important;
+    overflow-y: auto !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(184,196,216,0.09) !important;
+    flex-shrink: 0 !important;
+  }
+
   /* Goals card grid: 1 column on mobile */
   .goals-card-grid {
     grid-template-columns: 1fr !important;
