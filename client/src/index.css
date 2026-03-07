@@ -239,15 +239,13 @@ body::after {
   .reminders-panel,
   .activity-panel,
   .settings-panel,
-  .analytics-panel,
-  .commands-panel {
+  .analytics-panel {
     flex-direction: column !important;
   }
   .reminders-sidebar,
   .activity-sidebar,
   .settings-sidebar,
-  .analytics-sidebar,
-  .commands-sidebar {
+  .analytics-sidebar {
     width: 100% !important;
     min-width: 0 !important;
     max-height: 220px !important;
@@ -256,6 +254,7 @@ body::after {
     border-bottom: 1px solid rgba(184,196,216,0.09) !important;
     flex-shrink: 0 !important;
   }
+  /* commands-panel / commands-sidebar — mobile handled by VMPanel JSX directly */
 
   /* Analytics stat grid: 1 column on mobile */
   .analytics-stat-grid {

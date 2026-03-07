@@ -121,6 +121,13 @@ export default function VMPanel() {
   const [inputFoc, setInputFoc] = useState(false);
   const [activeGroup, setActiveGroup] = useState('system');
   const [firedCmd, setFiredCmd] = useState(null);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const safeMode = status?.safeModeActive === true;
 
@@ -167,6 +174,169 @@ export default function VMPanel() {
   };
 
   const handleSubmit = (e) => { e.preventDefault(); runCommand(); };
+
+  /* ─────────────────── MOBILE LAYOUT ─────────────────── */
+  if (isMobile) {
+    const activeGrp = COMMAND_GROUPS.find(g => g.key === activeGroup) ?? COMMAND_GROUPS[0];
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0,
+        background: C.bg, fontFamily: "'DM Sans', sans-serif",
+        borderRadius: 10, overflow: 'hidden', border: `1px solid ${C.border}`,
+      }}>
+
+        {/* ── Status bar ── */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '8px 12px', flexShrink: 0,
+          borderBottom: `1px solid ${C.border}`,
+          background: C.sidebar,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <div style={{
+              width: 26, height: 26, borderRadius: 7,
+              background: 'rgba(184,196,216,0.08)', border: '1px solid rgba(184,196,216,0.18)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B8C4D8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
+              </svg>
+            </div>
+            <span style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: 11, color: '#B8C4D8', letterSpacing: '0.04em' }}>Desktop Control</span>
+          </div>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '4px 9px', borderRadius: 6,
+            background: safeMode ? `${C.amber}12` : `${C.green}10`,
+            border: `1px solid ${safeMode ? C.amber + '35' : C.green + '30'}`,
+          }}>
+            <div style={{ width: 5, height: 5, borderRadius: '50%', background: safeMode ? C.amber : C.green, boxShadow: `0 0 4px ${safeMode ? C.amber : C.green}` }} />
+            <span style={{ fontSize: 10.5, fontWeight: 600, color: safeMode ? C.amber : C.green }}>
+              {safeMode ? 'Safe Mode' : 'Online'}
+            </span>
+          </div>
+        </div>
+
+        {/* ── Group chip strip ── */}
+        <div style={{
+          display: 'flex', gap: 5, padding: '7px 10px',
+          overflowX: 'auto', flexShrink: 0,
+          borderBottom: `1px solid ${C.border}`,
+          scrollbarWidth: 'none',
+        }}>
+          {COMMAND_GROUPS.map(g => (
+            <button key={g.key} onClick={() => setActiveGroup(g.key)} style={{
+              whiteSpace: 'nowrap', padding: '5px 13px',
+              borderRadius: 999, fontSize: 11, fontWeight: 600,
+              border: activeGroup === g.key ? `1px solid ${g.color}70` : `1px solid rgba(184,196,216,0.12)`,
+              background: activeGroup === g.key ? `${g.color}18` : 'transparent',
+              color: activeGroup === g.key ? g.color : C.faint,
+              cursor: 'pointer', transition: 'all .15s',
+            }}>{g.label}</button>
+          ))}
+        </div>
+
+        {/* ── Command grid (2-col) ── */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr',
+          gap: 6, padding: '8px 10px',
+          overflowY: 'auto', maxHeight: 220, flexShrink: 0,
+          borderBottom: `1px solid ${C.border}`,
+        }}>
+          {activeGrp.cmds.map(({ cmd, label }) => {
+            const fired = firedCmd === cmd;
+            return (
+              <button key={cmd} onClick={() => fireCommand(cmd)} style={{
+                padding: '9px 10px', borderRadius: 8, textAlign: 'left',
+                border: `1px solid ${fired ? activeGrp.color + '80' : 'rgba(184,196,216,0.10)'}`,
+                background: fired ? `${activeGrp.color}20` : 'rgba(184,196,216,0.04)',
+                color: fired ? activeGrp.color : C.text, cursor: 'pointer',
+                fontSize: 11.5, fontWeight: 500, lineHeight: 1.3,
+                transition: 'all .15s',
+              }}>
+                {fired ? `✓ ${label}` : label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Command input ── */}
+        <form onSubmit={handleSubmit} style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '8px 10px', flexShrink: 0,
+          borderBottom: `1px solid ${C.border}`,
+          background: C.sidebar,
+        }}>
+          <span style={{ color: C.green, fontFamily: "'DM Mono', monospace", fontSize: 14, fontWeight: 700, flexShrink: 0 }}>$</span>
+          <input
+            value={command}
+            onChange={e => setCommand(e.target.value)}
+            onFocus={() => setInputFoc(true)}
+            onBlur={() => setInputFoc(false)}
+            placeholder={safeMode ? 'Safe mode — blocked' : 'Type a command…'}
+            disabled={safeMode}
+            style={{
+              flex: 1, background: 'transparent', border: 'none', outline: 'none',
+              fontFamily: "'DM Mono', monospace", fontSize: 12.5, color: C.text,
+              padding: '3px 0',
+            }}
+          />
+          <button type="submit" disabled={loading || safeMode || !command.trim()} style={{
+            padding: '5px 14px', borderRadius: 7,
+            background: loading || safeMode || !command.trim() ? 'rgba(184,196,216,0.08)' : `${C.green}22`,
+            border: `1px solid ${loading || safeMode || !command.trim() ? 'rgba(184,196,216,0.10)' : C.green + '50'}`,
+            color: loading || safeMode || !command.trim() ? C.faint : C.green,
+            fontSize: 12, fontWeight: 600, cursor: 'pointer',
+          }}>
+            {loading ? '…' : 'Run'}
+          </button>
+        </form>
+
+        {/* ── Terminal output ── */}
+        <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+          {result && (
+            <div style={{ padding: '8px 12px' }}>
+              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11.5, color: C.green, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{result}</div>
+            </div>
+          )}
+          {error && (
+            <div style={{ padding: '8px 12px' }}>
+              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11.5, color: '#FF6B6B', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{error}</div>
+            </div>
+          )}
+          {loading && (
+            <div style={{ padding: '8px 12px', color: C.faint, fontSize: 12, fontStyle: 'italic' }}>Running…</div>
+          )}
+          {!result && !error && !loading && (
+            <div style={{ padding: '14px 12px', textAlign: 'center', color: C.faint, fontSize: 11.5 }}>
+              Tap a command or type one above
+            </div>
+          )}
+
+          {/* History */}
+          {history.length > 0 && (
+            <div style={{ padding: '4px 10px 10px' }}>
+              <div style={{ fontSize: 10, color: C.faint, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 5 }}>Recent</div>
+              {history.map((h, i) => (
+                <div key={i} onClick={() => fireCommand(h.command)} style={{
+                  display: 'flex', alignItems: 'center', gap: 7,
+                  padding: '7px 10px', borderRadius: 7, marginBottom: 4,
+                  background: 'rgba(184,196,216,0.04)', border: '1px solid rgba(184,196,216,0.08)',
+                  cursor: 'pointer',
+                }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: h.exitCode === 0 ? C.green : '#FF6B6B' }} />
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: C.text, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.command}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: h.exitCode === 0 ? C.green : '#FF6B6B', flexShrink: 0 }}>{h.exitCode === 0 ? 'OK' : 'Fail'}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* ─────────────────── DESKTOP LAYOUT ─────────────────── */
 
   return (
     <div className="commands-panel" style={{
