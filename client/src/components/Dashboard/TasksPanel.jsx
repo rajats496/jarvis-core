@@ -256,10 +256,10 @@ export default function TasksPanel() {
   const visibleDone    = visible.filter((t) => t.done);
 
   return (
-    <div style={panelStyle}>
+    <div style={panelStyle} className="tasks-panel">
 
       {/* ══ LEFT SIDEBAR ══ */}
-      <div style={sidebarStyle}>
+      <div style={sidebarStyle} className="tasks-sidebar">
 
         {/* Brand */}
         <div style={sbHeadStyle}>

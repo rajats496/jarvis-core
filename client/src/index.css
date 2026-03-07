@@ -207,7 +207,32 @@ body::after {
     padding: 0.6rem 0.75rem !important;
   }
 
-  /* ── MEMORY TAB ── */
+  /* ── TASKS TAB ── */
+  .tasks-panel {
+    flex-direction: column !important;
+  }
+  .tasks-sidebar {
+    width: 100% !important;
+    max-height: 220px !important;
+    overflow-y: auto !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(184,196,216,0.09) !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* ── GOALS TAB ── */
+  .goals-panel {
+    flex-direction: column !important;
+  }
+  .goals-sidebar {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-height: 220px !important;
+    overflow-y: auto !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(184,196,216,0.09) !important;
+    flex-shrink: 0 !important;
+  }
   .memory-panel {
     flex-direction: column !important;
   }

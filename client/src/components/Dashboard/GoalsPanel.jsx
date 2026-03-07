@@ -301,7 +301,7 @@ export default function GoalsPanel() {
   };
 
   return (
-    <div style={{
+    <div className="goals-panel" style={{
       display: 'flex',
       flexDirection: 'row',
       height: '100%',
@@ -313,7 +313,7 @@ export default function GoalsPanel() {
     }}>
 
       {/* ══ LEFT SIDEBAR ══ */}
-      <div style={sidebarStyle}>
+      <div className="goals-sidebar" style={sidebarStyle}>
 
         {/* icon box */}
         <div style={{
