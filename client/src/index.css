@@ -206,6 +206,19 @@ body::after {
   .chat-input-form {
     padding: 0.6rem 0.75rem !important;
   }
+
+  /* ── MEMORY TAB ── */
+  .memory-panel {
+    flex-direction: column !important;
+  }
+  .memory-sidebar {
+    width: 100% !important;
+    max-height: 180px !important;
+    overflow-y: auto !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(184,196,216,0.09) !important;
+    flex-shrink: 0 !important;
+  }
   /* Shrink avatar on mobile */
   .jarvis-avatar-wrap {
     width: 110px !important;

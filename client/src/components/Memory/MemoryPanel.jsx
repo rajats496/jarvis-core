@@ -89,10 +89,10 @@ export default function MemoryPanel() {
   const [memoryCount, setMemoryCount] = useState(null);
 
   return (
-    <div style={panelStyle}>
+    <div style={panelStyle} className="memory-panel">
 
       {/* ── LEFT SIDEBAR ── */}
-      <div style={sidebarStyle}>
+      <div style={sidebarStyle} className="memory-sidebar">
         {/* Brand */}
         <div style={sbHeaderStyle}>
           <div style={iconRowStyle}>
