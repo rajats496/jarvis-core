@@ -50,11 +50,16 @@ const router = createBrowserRouter(
 );
 
 export default function App() {
-  return (
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <RouterProvider router={router} />
-      </div>
-    </GoogleOAuthProvider>
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const hasGoogle = googleClientId && googleClientId !== 'YOUR_GOOGLE_CLIENT_ID_HERE';
+
+  const app = (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <RouterProvider router={router} />
+    </div>
   );
+
+  return hasGoogle
+    ? <GoogleOAuthProvider clientId={googleClientId}>{app}</GoogleOAuthProvider>
+    : app;
 }
