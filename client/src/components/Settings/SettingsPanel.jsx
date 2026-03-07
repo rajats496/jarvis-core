@@ -7,6 +7,11 @@ import { useState, useEffect } from 'react';
 import { useSettings } from '../../context/SettingsContext';
 import * as settingsApi from '../../api/settings.api';
 
+/* ── API base URL (matches axios.js pattern) ── */
+const apiBase =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? '/api' : 'http://localhost:3000');
+
 /* ── palette ── */
 const C = {
   bg:      'rgba(10,12,18,0.96)',
@@ -559,7 +564,7 @@ export default function SettingsPanel() {
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {/* Windows download */}
                 <a
-                  href="/api/agent/download?platform=windows"
+                  href={`${apiBase}/agent/download?platform=windows`}
                   download="jarvis-agent-windows.zip"
                   style={{
                     padding: '7px 14px', borderRadius: 6, fontSize: 12, fontWeight: 600,
@@ -572,7 +577,7 @@ export default function SettingsPanel() {
                 </a>
                 {/* Mac download */}
                 <a
-                  href="/api/agent/download?platform=mac"
+                  href={`${apiBase}/agent/download?platform=mac`}
                   download="jarvis-agent-mac.zip"
                   style={{
                     padding: '7px 14px', borderRadius: 6, fontSize: 12, fontWeight: 600,
