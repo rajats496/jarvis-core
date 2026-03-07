@@ -1,0 +1,15 @@
+# Cloudflare Tunnel Config Template
+# ────────────────────────────────────────────────────────────
+# Copy this file to: C:\Users\<YourName>\.cloudflared\config.yml
+# Replace the values below with your actual tunnel ID and hostname.
+#
+# To find your TunnelID, run:  cloudflared tunnel list
+# ────────────────────────────────────────────────────────────
+
+tunnel: YOUR-TUNNEL-ID-HERE
+credentials-file: C:\Users\YOUR-USERNAME\.cloudflared\YOUR-TUNNEL-ID-HERE.json
+
+ingress:
+  - hostname: jarvis-agent.yourdomain.com
+    service: http://localhost:4000
+  - service: http_status:404

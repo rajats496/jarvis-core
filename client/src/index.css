@@ -1,0 +1,173 @@
+/* Jarvis AI Assistant — Modern SaaS AI Theme */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: #060709;          /* Arctic base */
+  overscroll-behavior: none;
+  height: 100%;
+}
+:root {
+  /* ── Surfaces (arctic dark slate) ── */
+  --bg:              #060709;
+  --bg-page:         #0F1218;
+  --bg-card:         rgba(12, 15, 22, 0.85);
+  --bg-elevated:     rgba(18, 22, 32, 0.90);
+  --bg-hover:        rgba(184, 196, 216, 0.06);
+  --bubble-assistant:rgba(18, 22, 32, 0.90);
+  --bubble-user:     rgba(26, 30, 42, 0.70);
+
+  /* ── Borders ── */
+  --border:          rgba(180, 196, 220, 0.09);
+  --border-subtle:   rgba(180, 196, 220, 0.06);
+  --border2:         rgba(200, 216, 240, 0.20);
+
+  /* ── Text ── */
+  --text:            #EEF2FF;
+  --text-muted:      #6E7A90;
+  --text-faint:      #2E3545;
+
+  /* ── Accent (arctic silver) ── */
+  --accent:          #B8C4D8;
+  --accent-dark:     #7A90B0;
+  --accent-glow:     rgba(184, 196, 216, 0.14);
+
+  /* ── Semantic ── */
+  --success:         #22C55E;
+  --warn:            #B8C4D8;
+  --danger:          #ef4444;
+
+  /* ── Shadows ── */
+  --shadow-sm:       0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:       0 4px 16px rgba(0,0,0,0.5);
+  --shadow-glow:     0 0 24px rgba(180,200,240,0.10);
+
+  /* ── Radius ── */
+  --radius-sm:       6px;
+  --radius-md:       10px;
+  --radius-lg:       14px;
+}
+body {
+  margin: 0;
+  font-family: 'Rajdhani', sans-serif;
+
+  /* ── Arctic frost gradient ── */
+  background: linear-gradient(160deg, #0D1018 0%, #090B12 50%, #060709 100%);
+  background-attachment: fixed;
+  background-color: #060709;
+
+  color: var(--text);
+  height: 100%;
+  overflow: hidden;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+}
+
+/* ── Arctic vignette glows ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 50% 45% at 12% 18%, rgba(180,210,255,0.08), transparent 65%),
+    radial-gradient(ellipse 40% 38% at 88% 85%, rgba(200,220,255,0.07), transparent 65%),
+    radial-gradient(ellipse 60% 40% at 50% 50%, rgba(140,170,220,0.04), transparent 72%);
+}
+
+/* ── Layer 3: noise / grain texture ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+  height: 100%;               /* Fill exactly the viewport — no body-level overflow */
+  overflow: hidden;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes stopPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(239,68,68,0.25); }
+  50%       { box-shadow: 0 0 18px rgba(239,68,68,0.6); }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+  
+  main.dashboard-main {
+    flex-direction: column;
+    padding: 0.5rem !important;
+  }
+  
+  main.dashboard-main section.memory-section {
+    width: 100%;
+    max-height: 50vh;
+  }
+  
+  /* Make header more compact on mobile */
+  header {
+    padding: 0.5rem 1rem !important;
+    font-size: 0.9rem !important;
+  }
+  
+  /* Tab strip scrollable on mobile */
+  .dashboard-content {
+    overflow-x: auto;
+  }
+  
+  /* Make buttons and inputs more touch-friendly */
+  button, input[type="text"], input[type="email"], input[type="password"], textarea {
+    min-height: 44px;
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+  
+  /* Compact chat messages */
+  .message-bubble {
+    font-size: 0.9rem;
+    padding: 0.6rem !important;
+  }
+  
+  /* Make modals full-screen on mobile */
+  .modal-content {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    border-radius: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    font-size: 13px;
+  }
+  
+  main.dashboard-main {
+    padding: 0.25rem !important;
+  }
+  
+  /* Stack badges vertically on very small screens */
+  header > span {
+    font-size: 0.75rem !important;
+  }
+}

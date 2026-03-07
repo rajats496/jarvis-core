@@ -1,0 +1,17 @@
+{
+    "name": "jarvis-desktop-agent",
+    "version": "1.0.0",
+    "description": "Local agent for Jarvis AI Assistant — runs whitelisted commands on your Windows PC",
+    "main": "agent.js",
+    "scripts": {
+        "start": "node agent.js",
+        "dev": "node --watch agent.js"
+    },
+    "dependencies": {
+        "cors": "^2.8.5",
+        "express": "^4.18.2"
+    },
+    "optionalDependencies": {
+        "@ngrok/ngrok": "^1.4.0"
+    }
+}
