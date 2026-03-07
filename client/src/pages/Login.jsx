@@ -73,7 +73,7 @@ export default function Login() {
   });
 
   return (
-    <div style={{
+    <div className="auth-page-wrapper" style={{
       minHeight: '100vh',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'linear-gradient(160deg, #0D1018 0%, #090B12 55%, #060709 100%)',
@@ -118,7 +118,7 @@ export default function Login() {
       </div>
 
       {/* ── Card ── */}
-      <div style={{
+      <div className="auth-card" style={{
         position: 'relative', zIndex: 2,
         width: '100%', maxWidth: 460,
         background: 'rgba(14,17,26,0.90)',

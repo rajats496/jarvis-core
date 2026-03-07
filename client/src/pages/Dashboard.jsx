@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import JarvisSidebar from '../components/Dashboard/JarvisSidebar';
 import JarvisHeader from '../components/Dashboard/JarvisHeader';
 import ReminderToast from '../components/Dashboard/ReminderToast';
+import MobileNavDrawer from '../components/Dashboard/MobileNavDrawer';
 import SystemMonitorPanel from '../components/Dashboard/SystemMonitorPanel';
 import ChatWindow from '../components/Chat/ChatWindow';
 import ConversationSearch from '../components/Dashboard/ConversationSearch';
@@ -39,6 +40,7 @@ export default function Dashboard() {
   };
   const [panelsRefreshKey, setPanelsRefreshKey] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(window.innerWidth < 1024);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [reminderNotifs, setReminderNotifs] = useState([]);
   const [clearChatTrigger, setClearChatTrigger] = useState(0);
   const [quickChatMessage, setQuickChatMessage] = useState(null);
@@ -155,13 +157,38 @@ export default function Dashboard() {
       {/* Reminder toasts — fixed position, bottom-right */}
       <ReminderToast notifications={reminderNotifs} onDismiss={handleDismissNotif} />
 
-      {/* Sidebar - Left */}
+      {/* Mobile Nav Drawer — rendered for all screen sizes but CSS hides hamburger on desktop */}
+      <MobileNavDrawer
+        open={mobileDrawerOpen}
+        onClose={() => setMobileDrawerOpen(false)}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        user={user}
+        onLogout={handleLogout}
+      />
+
+      {/* Fixed Hamburger button — bottom-left, mobile only (hidden on desktop via CSS) */}
+      <button
+        type="button"
+        className="mobile-hamburger-btn"
+        onClick={() => setMobileDrawerOpen(true)}
+        aria-label="Open navigation menu"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth="2.2" strokeLinecap="round">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
+      {/* Sidebar - Left (desktop) */}
       {!sidebarCollapsed && (
         <JarvisSidebar activeTab={activeTab} onTabChange={handleTabChange} user={user} />
       )}
 
       {/* Main Content - Center */}
-      <main style={{ ...mainStyle, marginLeft: sidebarCollapsed ? 0 : '260px', marginRight: sidebarCollapsed ? 0 : '280px' }}>
+      <main className="dashboard-main" style={{ ...mainStyle, marginLeft: sidebarCollapsed ? 0 : '260px', marginRight: sidebarCollapsed ? 0 : '280px' }}>
         <JarvisHeader
           user={user}
           onLogout={handleLogout}
@@ -172,17 +199,17 @@ export default function Dashboard() {
           onNotifDismiss={handleDismissNotif}
         />
 
-        {/* Mobile Tab Navigation */}
+        {/* Mobile quick-tab strip (compact, scrollable) */}
         {sidebarCollapsed && (
-          <div style={mobileNavStyle} className="jarvis-scroll">
-            {['chat', 'memory', 'tasks', 'goals', 'reminders', 'settings'].map((tab) => (
+          <div style={mobileNavStyle} className="jarvis-scroll mobile-tab-strip">
+            {['chat', 'memory', 'tasks', 'goals', 'reminders', 'activity', 'commands', 'analytics', 'settings'].map((tab) => (
               <button
                 key={tab}
                 className={`jarvis-nav-item ${activeTab === tab ? 'active' : ''}`}
                 onClick={() => handleTabChange(tab)}
                 style={mobileTabStyle}
               >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === 'commands' ? 'Desktop' : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </div>
@@ -239,16 +266,20 @@ const contentStyle = {
 
 const mobileNavStyle = {
   display: 'flex',
-  gap: '0.5rem',
-  padding: '0.75rem 0',
+  gap: '0.4rem',
+  padding: '0.5rem 0 0.5rem',
   overflowX: 'auto',
   flexShrink: 0,
+  WebkitOverflowScrolling: 'touch',
+  scrollbarWidth: 'none',
+  msOverflowStyle: 'none',
 };
 
 const mobileTabStyle = {
-  padding: '0.5rem 1rem',
+  padding: '0.45rem 0.85rem',
   border: 'none',
   background: 'transparent',
   whiteSpace: 'nowrap',
-  fontSize: '0.9rem',
+  fontSize: '0.82rem',
+  flexShrink: 0,
 };

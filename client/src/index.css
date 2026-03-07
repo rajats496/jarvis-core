@@ -109,65 +109,209 @@ body::after {
   50%       { box-shadow: 0 0 18px rgba(239,68,68,0.6); }
 }
 
-/* Mobile responsiveness */
-@media (max-width: 768px) {
-  body {
-    font-size: 14px;
+/* ═══════════════════════════════════════════════════════
+   MOBILE HAMBURGER BUTTON
+   Fixed bottom-left, visible only on mobile (< 768px)
+═══════════════════════════════════════════════════════ */
+.mobile-hamburger-btn {
+  display: none; /* hidden on desktop by default */
+  position: fixed;
+  bottom: 20px;
+  left: 16px;
+  z-index: 997;
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  border: 1px solid rgba(184, 196, 216, 0.20);
+  background: rgba(10, 12, 20, 0.92);
+  color: #B8C4D8;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.60), 0 0 0 1px rgba(180, 200, 240, 0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: background 0.18s, border-color 0.18s, transform 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-hamburger-btn:active {
+  transform: scale(0.93);
+  background: rgba(184, 196, 216, 0.12);
+}
+
+/* ═══════════════════════════════════════════════════════
+   RESPONSIVE — TABLET (481px – 1024px)
+═══════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  /* Header: tighten horizontal padding */
+  .jarvis-header {
+    padding: 0 1rem !important;
   }
-  
-  main.dashboard-main {
-    flex-direction: column;
-    padding: 0.5rem !important;
-  }
-  
-  main.dashboard-main section.memory-section {
-    width: 100%;
-    max-height: 50vh;
-  }
-  
-  /* Make header more compact on mobile */
-  header {
-    padding: 0.5rem 1rem !important;
-    font-size: 0.9rem !important;
-  }
-  
-  /* Tab strip scrollable on mobile */
-  .dashboard-content {
-    overflow-x: auto;
-  }
-  
-  /* Make buttons and inputs more touch-friendly */
-  button, input[type="text"], input[type="email"], input[type="password"], textarea {
-    min-height: 44px;
-    font-size: 16px; /* Prevent zoom on iOS */
-  }
-  
-  /* Compact chat messages */
-  .message-bubble {
-    font-size: 0.9rem;
-    padding: 0.6rem !important;
-  }
-  
-  /* Make modals full-screen on mobile */
-  .modal-content {
-    width: 100vw;
-    height: 100vh;
-    max-width: 100vw;
-    border-radius: 0;
+
+  /* Mobile tab strip: hide native scrollbar */
+  .mobile-tab-strip::-webkit-scrollbar {
+    display: none;
   }
 }
 
+/* ═══════════════════════════════════════════════════════
+   RESPONSIVE — MOBILE (≤ 768px)
+   Show hamburger, compact layout
+═══════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Show hamburger button on mobile */
+  .mobile-hamburger-btn {
+    display: flex;
+  }
+
+  body {
+    font-size: 14px;
+    /* Allow native scroll on non-dashboard pages (login, register, landing) */
+    overflow-x: hidden;
+  }
+
+  /* Dashboard root: allow tall content to scroll */
+  #root {
+    overflow: auto;
+  }
+
+  /* Header compact */
+  .jarvis-header {
+    padding: 0 0.75rem !important;
+  }
+
+  /* Hide AI badge text on very small screens */
+  .jarvis-ai-badge-text {
+    display: none;
+  }
+
+  /* Header title — slightly smaller */
+  .jarvis-title-text {
+    font-size: 11px !important;
+  }
+
+  /* Mobile tab strip - compact, full-width, no scrollbar */
+  .mobile-tab-strip {
+    padding: 0.4rem 0 !important;
+    margin: 0 -0.25rem;
+  }
+  .mobile-tab-strip::-webkit-scrollbar {
+    display: none;
+  }
+  .mobile-tab-strip .jarvis-nav-item {
+    padding: 0.35rem 0.7rem !important;
+    font-size: 0.75rem !important;
+    border-radius: 6px !important;
+  }
+
+  /* Content glass panel: ensure hamburger button never overlaps bottom content */
+  .glass-panel {
+    margin-bottom: 70px !important;
+  }
+
+  /* Make buttons touch-friendly */
+  button:not(.mobile-hamburger-btn) {
+    min-height: 36px;
+  }
+
+  /* Prevent zoom on input focus (iOS) */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
+  /* Notification dropdown: full width on mobile */
+  .notif-dropdown {
+    width: calc(100vw - 32px) !important;
+    right: auto !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+  }
+
+  /* Message bubbles — more compact */
+  .message-bubble {
+    font-size: 0.88rem !important;
+    padding: 0.65rem 0.85rem !important;
+  }
+
+  /* Glass panel — less padding on mobile */
+  .glass-panel {
+    border-radius: 10px !important;
+  }
+
+  /* Cards in analytics, settings, memory — full width */
+  [class*="card"],
+  [class*="Card"] {
+    min-width: 0 !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   RESPONSIVE — SMALL MOBILE (≤ 480px)
+═══════════════════════════════════════════════════════ */
 @media (max-width: 480px) {
   body {
     font-size: 13px;
   }
-  
-  main.dashboard-main {
-    padding: 0.25rem !important;
+
+  /* Tighter main content padding */
+  .dashboard-main {
+    padding: 0 0.4rem !important;
   }
-  
-  /* Stack badges vertically on very small screens */
-  header > span {
-    font-size: 0.75rem !important;
+
+  /* Move hamburger slightly higher to avoid bottom edge */
+  .mobile-hamburger-btn {
+    bottom: 16px;
+    left: 12px;
+    width: 42px;
+    height: 42px;
+  }
+
+  /* Tighter header */
+  .jarvis-header {
+    padding: 0 0.6rem !important;
+  }
+
+  /* Tab strip items even more compact */
+  .mobile-tab-strip .jarvis-nav-item {
+    padding: 0.3rem 0.6rem !important;
+    font-size: 0.7rem !important;
+  }
+
+  /* Reminder toast: full width on tiny screens */
+  .reminder-toast {
+    width: calc(100vw - 24px) !important;
+    right: 12px !important;
+    left: 12px !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   LOGIN / REGISTER PAGES — MOBILE
+═══════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Make auth page scroll independently (body stays overflow:hidden for dashboard) */
+  .auth-page-wrapper {
+    position: fixed !important;
+    inset: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    align-items: flex-start !important;
+    padding: 20px 14px 40px !important;
+  }
+
+  /* Auth card: full width, compact padding */
+  .auth-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 18px !important;
+  }
+
+  .auth-card > div {
+    padding: 1.8rem 1.4rem 1.6rem !important;
+  }
+}
+
+/* Landing page responsive CSS is handled internally in Landing.jsx (LANDING_CSS constant) */
+

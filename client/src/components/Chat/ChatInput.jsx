@@ -30,7 +30,7 @@ export default function ChatInput({ onSend, disabled, placeholder = 'Ask Jarvis 
 
   return (
     <>
-      <form onSubmit={handleSubmit} style={wrapStyle}>
+      <form onSubmit={handleSubmit} style={wrapStyle} className="chat-input-form">
         {/* Voice waveform OR mic button */}
         {hasVoice && (
           <button

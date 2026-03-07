@@ -37,7 +37,7 @@ export default function JarvisHeader({ user, onLogout, sidebarCollapsed, onToggl
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={titleStyle}>Jarvis AI Assistant</span>
+          <span style={titleStyle} className="jarvis-title-text">Jarvis AI Assistant</span>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4A5568" strokeWidth="2.5" strokeLinecap="round">
             <path d="M6 9l6 6 6-6" />
           </svg>
@@ -46,13 +46,13 @@ export default function JarvisHeader({ user, onLogout, sidebarCollapsed, onToggl
 
       {/* Center — AI status badge */}
       <div style={centerStyle}>
-        <div style={aiBadgeStyle}>
+        <div style={aiBadgeStyle} className="jarvis-ai-badge">
           <span style={{
             width: 7, height: 7, borderRadius: '50%', background: '#4ADE80',
             display: 'inline-block', boxShadow: '0 0 7px #4ADE80',
             animation: 'pulseOnline 2s infinite',
           }} />
-          AI Enabled
+          <span className="jarvis-ai-badge-text">AI Enabled</span>
         </div>
       </div>
 
@@ -101,7 +101,7 @@ export default function JarvisHeader({ user, onLogout, sidebarCollapsed, onToggl
 
           {/* Notification Dropdown */}
           {notifOpen && (
-            <div style={{
+            <div className="notif-dropdown" style={{
               position: 'absolute', top: 'calc(100% + 8px)', right: 0,
               width: 300, maxHeight: 360,
               background: 'rgba(10, 12, 18, 0.98)',
