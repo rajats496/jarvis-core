@@ -79,7 +79,7 @@ export default function Login() {
       background: 'linear-gradient(160deg, #0D1018 0%, #090B12 55%, #060709 100%)',
       padding: '24px 16px',
       fontFamily: "'Rajdhani', sans-serif",
-      position: 'relative', overflow: 'hidden',
+      position: 'relative', overflowY: 'auto', overflowX: 'hidden',
     }}>
       {/* Square grid background */}
       <div style={{
@@ -108,14 +108,7 @@ export default function Login() {
         <div key={i} style={{ position: 'fixed', width: 36, height: 36, pointerEvents: 'none', zIndex: 2, ...s }} />
       ))}
 
-      {/* System version */}
-      <div style={{
-        position: 'fixed', bottom: 26, left: '50%', transform: 'translateX(-50%)',
-        fontFamily: "'DM Mono', monospace", fontSize: '0.58rem', color: '#2E3545',
-        letterSpacing: '0.14em', zIndex: 3, whiteSpace: 'nowrap',
-      }}>
-        J.A.R.V.I.S v4.1 · SECURE ACCESS PORTAL
-      </div>
+
 
       {/* ── Card ── */}
       <div className="auth-card" style={{
