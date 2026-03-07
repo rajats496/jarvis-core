@@ -1,5 +1,9 @@
 import { api } from './axios';
 
+export async function clearHistory() {
+  await api.delete('/conversations');
+}
+
 export async function getHistory(limit = 50) {
   const { data } = await api.get('/conversations/history', { params: { limit } });
   return data.messages || [];

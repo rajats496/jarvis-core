@@ -85,4 +85,13 @@ module.exports = {
   search,
   list,
   getOrCreateConversation,
+  clearHistory,
 };
+
+/**
+ * Delete all conversation messages for a user (clear chat history).
+ */
+async function clearHistory(userId) {
+  if (!userId) return;
+  await Conversation.deleteMany({ userId });
+}

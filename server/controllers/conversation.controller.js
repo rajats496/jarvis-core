@@ -37,4 +37,14 @@ async function list(req, res, next) {
   }
 }
 
-module.exports = { getHistory, search, list };
+async function clearHistory(req, res, next) {
+  try {
+    const userId = req.user.id;
+    await conversationService.clearHistory(userId);
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { getHistory, search, list, clearHistory };

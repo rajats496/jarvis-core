@@ -9,6 +9,7 @@ import { useVoice } from '../../hooks/useVoice';
 import { useSystemStatus } from '../../hooks/useSystemStatus';
 import * as chatApi from '../../api/chat.api';
 import * as settingsApi from '../../api/settings.api';
+import * as conversationsApi from '../../api/conversations.api';
 import MessageBubble from './MessageBubble';
 import ChatInput from './ChatInput';
 import JarvisAvatar from './JarvisAvatar';
@@ -228,8 +229,12 @@ export default function ChatWindow({ onMemoryUpdate, clearChatTrigger, quickMess
 
   // External clear-chat trigger from header button
   useEffect(() => {
-    if (clearChatTrigger > 0) setMessages([]);
-  }, [clearChatTrigger]);
+    if (clearChatTrigger > 0) {
+      setMessages([]);
+      saveMessages(userId, []);
+      conversationsApi.clearHistory().catch(() => {});
+    }
+  }, [clearChatTrigger, userId]);
 
   // Quick command message sent from right-panel buttons
   useEffect(() => {
@@ -348,6 +353,8 @@ export default function ChatWindow({ onMemoryUpdate, clearChatTrigger, quickMess
   const handleClearChat = () => {
     if (messages.length === 0) return;
     setMessages([]);
+    saveMessages(userId, []);
+    conversationsApi.clearHistory().catch(() => {});
   };
 
   return (

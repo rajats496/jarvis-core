@@ -11,5 +11,6 @@ router.use(authMiddleware);
 router.get('/history', conversationController.getHistory);
 router.get('/search', conversationController.search);
 router.get('/', conversationController.list);
+router.delete('/', conversationController.clearHistory);
 
 module.exports = router;
