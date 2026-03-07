@@ -167,21 +167,6 @@ export default function Dashboard() {
         onLogout={handleLogout}
       />
 
-      {/* Fixed Hamburger button — bottom-left, mobile only (hidden on desktop via CSS) */}
-      <button
-        type="button"
-        className="mobile-hamburger-btn"
-        onClick={() => setMobileDrawerOpen(true)}
-        aria-label="Open navigation menu"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          strokeWidth="2.2" strokeLinecap="round">
-          <line x1="3" y1="6" x2="21" y2="6"/>
-          <line x1="3" y1="12" x2="21" y2="12"/>
-          <line x1="3" y1="18" x2="21" y2="18"/>
-        </svg>
-      </button>
-
       {/* Sidebar - Left (desktop) */}
       {!sidebarCollapsed && (
         <JarvisSidebar activeTab={activeTab} onTabChange={handleTabChange} user={user} />
@@ -194,26 +179,11 @@ export default function Dashboard() {
           onLogout={handleLogout}
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onOpenDrawer={() => setMobileDrawerOpen(true)}
           onClearChat={() => setClearChatTrigger(c => c + 1)}
           notifications={reminderNotifs}
           onNotifDismiss={handleDismissNotif}
         />
-
-        {/* Mobile quick-tab strip (compact, scrollable) */}
-        {sidebarCollapsed && (
-          <div style={mobileNavStyle} className="jarvis-scroll mobile-tab-strip">
-            {['chat', 'memory', 'tasks', 'goals', 'reminders', 'activity', 'commands', 'analytics', 'settings'].map((tab) => (
-              <button
-                key={tab}
-                className={`jarvis-nav-item ${activeTab === tab ? 'active' : ''}`}
-                onClick={() => handleTabChange(tab)}
-                style={mobileTabStyle}
-              >
-                {tab === 'commands' ? 'Desktop' : tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </button>
-            ))}
-          </div>
-        )}
 
         <section style={contentStyle} className="glass-panel jarvis-scroll">
           {/* Always-mounted panels — listeners stay active even while on chat tab */}
@@ -264,22 +234,3 @@ const contentStyle = {
   marginBottom: '1rem',
 };
 
-const mobileNavStyle = {
-  display: 'flex',
-  gap: '0.4rem',
-  padding: '0.5rem 0 0.5rem',
-  overflowX: 'auto',
-  flexShrink: 0,
-  WebkitOverflowScrolling: 'touch',
-  scrollbarWidth: 'none',
-  msOverflowStyle: 'none',
-};
-
-const mobileTabStyle = {
-  padding: '0.45rem 0.85rem',
-  border: 'none',
-  background: 'transparent',
-  whiteSpace: 'nowrap',
-  fontSize: '0.82rem',
-  flexShrink: 0,
-};

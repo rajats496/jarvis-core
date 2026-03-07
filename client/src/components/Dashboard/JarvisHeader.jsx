@@ -3,7 +3,7 @@
  */
 import { useState, useEffect, useRef } from 'react';
 
-export default function JarvisHeader({ user, onLogout, sidebarCollapsed, onToggleSidebar, onClearChat, notifications = [], onNotifDismiss }) {
+export default function JarvisHeader({ user, onLogout, sidebarCollapsed, onToggleSidebar, onOpenDrawer, onClearChat, notifications = [], onNotifDismiss }) {
   const [notifOpen, setNotifOpen] = useState(false);
   const bellRef = useRef(null);
 
@@ -24,8 +24,8 @@ export default function JarvisHeader({ user, onLogout, sidebarCollapsed, onToggl
       <div style={leftStyle}>
         <button
           type="button"
-          onClick={onToggleSidebar}
-          title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+          onClick={sidebarCollapsed ? onOpenDrawer : onToggleSidebar}
+          title={sidebarCollapsed ? 'Open navigation' : 'Collapse Sidebar'}
           style={toggleBtnStyle}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#B8C4D8'; }}
           onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#4A5568'; }}

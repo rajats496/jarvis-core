@@ -110,48 +110,12 @@ body::after {
 }
 
 /* ═══════════════════════════════════════════════════════
-   MOBILE HAMBURGER BUTTON
-   Fixed bottom-left, visible only on mobile (< 768px)
-═══════════════════════════════════════════════════════ */
-.mobile-hamburger-btn {
-  display: none; /* hidden on desktop by default */
-  position: fixed;
-  bottom: 20px;
-  left: 16px;
-  z-index: 997;
-  width: 46px;
-  height: 46px;
-  border-radius: 13px;
-  border: 1px solid rgba(184, 196, 216, 0.20);
-  background: rgba(10, 12, 20, 0.92);
-  color: #B8C4D8;
-  cursor: pointer;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.60), 0 0 0 1px rgba(180, 200, 240, 0.06);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  transition: background 0.18s, border-color 0.18s, transform 0.15s;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.mobile-hamburger-btn:active {
-  transform: scale(0.93);
-  background: rgba(184, 196, 216, 0.12);
-}
-
-/* ═══════════════════════════════════════════════════════
    RESPONSIVE — TABLET (481px – 1024px)
 ═══════════════════════════════════════════════════════ */
 @media (max-width: 1024px) {
   /* Header: tighten horizontal padding */
   .jarvis-header {
     padding: 0 1rem !important;
-  }
-
-  /* Mobile tab strip: hide native scrollbar */
-  .mobile-tab-strip::-webkit-scrollbar {
-    display: none;
   }
 }
 
@@ -160,11 +124,6 @@ body::after {
    Show hamburger, compact layout
 ═══════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
-  /* Show hamburger button on mobile */
-  .mobile-hamburger-btn {
-    display: flex;
-  }
-
   body {
     font-size: 14px;
     /* Allow native scroll on non-dashboard pages (login, register, landing) */
@@ -191,27 +150,8 @@ body::after {
     font-size: 11px !important;
   }
 
-  /* Mobile tab strip - compact, full-width, no scrollbar */
-  .mobile-tab-strip {
-    padding: 0.4rem 0 !important;
-    margin: 0 -0.25rem;
-  }
-  .mobile-tab-strip::-webkit-scrollbar {
-    display: none;
-  }
-  .mobile-tab-strip .jarvis-nav-item {
-    padding: 0.35rem 0.7rem !important;
-    font-size: 0.75rem !important;
-    border-radius: 6px !important;
-  }
-
-  /* Content glass panel: ensure hamburger button never overlaps bottom content */
-  .glass-panel {
-    margin-bottom: 70px !important;
-  }
-
   /* Make buttons touch-friendly */
-  button:not(.mobile-hamburger-btn) {
+  button {
     min-height: 36px;
   }
 
@@ -259,23 +199,9 @@ body::after {
     padding: 0 0.4rem !important;
   }
 
-  /* Move hamburger slightly higher to avoid bottom edge */
-  .mobile-hamburger-btn {
-    bottom: 16px;
-    left: 12px;
-    width: 42px;
-    height: 42px;
-  }
-
   /* Tighter header */
   .jarvis-header {
     padding: 0 0.6rem !important;
-  }
-
-  /* Tab strip items even more compact */
-  .mobile-tab-strip .jarvis-nav-item {
-    padding: 0.3rem 0.6rem !important;
-    font-size: 0.7rem !important;
   }
 
   /* Reminder toast: full width on tiny screens */
