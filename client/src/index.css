@@ -257,6 +257,15 @@ body::after {
   }
   /* commands-panel / commands-sidebar — mobile handled by VMPanel JSX directly */
 
+  /* Goals card grid: 1 column on mobile */
+  .goals-card-grid {
+    grid-template-columns: 1fr !important;
+  }
+  /* Hide the flex spacer so the voice hint is visible without scrolling */
+  .goals-spacer {
+    display: none !important;
+  }
+
   /* Analytics stat grid: 1 column on mobile */
   .analytics-stat-grid {
     grid-template-columns: 1fr !important;

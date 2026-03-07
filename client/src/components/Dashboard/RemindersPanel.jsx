@@ -391,11 +391,16 @@ export default function RemindersPanel() {
           padding: '9px 11px',
           fontSize: 11,
           color: C.muted,
-          lineHeight: 1.5,
+          lineHeight: 1.6,
           marginBottom: 10,
+          flexShrink: 0,
         }}>
-          <span style={{ color: '#B8C4D8', fontWeight: 600 }}>Tip:</span>{' '}
-          Say "Remind me at 7 PM to study MongoDB" in chat.
+          <div style={{ color: '#B8C4D8', fontWeight: 600, marginBottom: 4 }}>💬 Voice / Chat commands</div>
+          <div style={{ marginBottom: 2 }}>• <span style={{color:'#CBD5E1'}}>"Remind me at 7 PM to study MongoDB"</span></div>
+          <div style={{ marginBottom: 2 }}>• <span style={{color:'#CBD5E1'}}>"Show my reminders"</span></div>
+          <div style={{ marginBottom: 2 }}>• <span style={{color:'#CBD5E1'}}>"Remind me tomorrow at 9 AM to call X"</span></div>
+          <div style={{ marginBottom: 2 }}>• <span style={{color:'#CBD5E1'}}>"Delete reminder 1"</span></div>
+          <div>• <span style={{color:'#CBD5E1'}}>"Cancel all reminders"</span></div>
         </div>
 
         <button
