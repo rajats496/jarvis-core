@@ -11,25 +11,48 @@ const nodemailer = require('nodemailer');
 const logger     = require('../utils/logger');
 
 let transporter = null;
+let transportVerified = false;
 
-function getTransporter() {
-  if (transporter) return transporter;
+// Log env-var presence once at module load (no values leaked)
+logger.info(`[email] EMAIL_USER present: ${!!process.env.EMAIL_USER}, EMAIL_APP_PASSWORD present: ${!!process.env.EMAIL_APP_PASSWORD}`);
 
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
+async function getTransporter() {
+  if (transporter && transportVerified) return transporter;
+
+  const emailUser = (process.env.EMAIL_USER || '').trim();
+  const emailPass = (process.env.EMAIL_APP_PASSWORD || '').replace(/\s+/g, ''); // strip accidental spaces
+
+  if (!emailUser || !emailPass) {
     logger.warn('[email] EMAIL_USER / EMAIL_APP_PASSWORD not set — email sending disabled');
     return null;
   }
 
+  logger.info(`[email] Creating SMTP transport for ${emailUser}`);
+
   transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_APP_PASSWORD,
+      user: emailUser,
+      pass: emailPass,
     },
-    connectionTimeout: 8000,   // 8 s to establish TCP connection
-    greetingTimeout:   8000,   // 8 s for SMTP greeting
-    socketTimeout:     15000,  // 15 s for socket inactivity
+    connectionTimeout: 10000,
+    greetingTimeout:   10000,
+    socketTimeout:     15000,
   });
+
+  // Eagerly verify SMTP creds — throws on bad password / blocked account
+  try {
+    await transporter.verify();
+    transportVerified = true;
+    logger.info('[email] SMTP transport verified OK');
+  } catch (verifyErr) {
+    logger.error(`[email] SMTP verify FAILED: ${verifyErr.message}`);
+    transporter = null;
+    transportVerified = false;
+    throw new Error(`SMTP auth failed: ${verifyErr.message}`);
+  }
 
   return transporter;
 }
@@ -41,12 +64,18 @@ function getTransporter() {
  * @param {'signup'|'reset'} purpose
  */
 async function sendOtpEmail(to, otp, purpose) {
-  const t = getTransporter();
+  let t;
+  try {
+    t = await getTransporter();
+  } catch (transportErr) {
+    logger.warn(`[email] Transport init failed: ${transportErr.message}`);
+    throw transportErr;
+  }
 
   // Dev fallback: log OTP to console when email is not configured
   if (!t) {
     logger.info(`[email] DEV MODE — OTP for ${to} (${purpose}): ${otp}`);
-    return;
+    return { sent: false, reason: 'Email credentials not configured on server' };
   }
 
   const fromName  = process.env.EMAIL_FROM_NAME || 'J.A.R.V.I.S';
@@ -124,6 +153,7 @@ async function sendOtpEmail(to, otp, purpose) {
 
   await Promise.race([mailPromise, timeout]);
   logger.info(`[email] OTP sent to ${to} (purpose: ${purpose})`);
+  return { sent: true };
 }
 
 module.exports = { sendOtpEmail };

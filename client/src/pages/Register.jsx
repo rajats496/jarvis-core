@@ -27,6 +27,7 @@ export default function Register() {
   const [otp,        setOtp]        = useState('');
   const [resendSecs, setResendSecs] = useState(0);
   const [devOtp,     setDevOtp]     = useState('');
+  const [emailErr,   setEmailErr]   = useState('');   // why email failed
   const [slowReq,    setSlowReq]    = useState(false);
   const otpRef  = useRef(null);
   const slowRef = useRef(null);
@@ -71,7 +72,8 @@ export default function Register() {
     slowRef.current = setTimeout(() => setSlowReq(true), 6000);
     try {
       const res = await authApi.sendSignupOtp(email.trim());
-      if (res.devOtp) setDevOtp(res.devOtp); // dev mode: display OTP on screen
+      if (res.devOtp) setDevOtp(res.devOtp);
+      if (res.emailError) setEmailErr(res.emailError);
       setStep(2);
       setResendSecs(30);
       setTimeout(() => otpRef.current?.focus(), 100);
@@ -109,11 +111,12 @@ export default function Register() {
   /* â”€â”€ Resend OTP â”€â”€ */
   const handleResend = async () => {
     if (resendSecs > 0 || submitting) return;
-    setError(''); setOtp(''); setDevOtp('');
+    setError(''); setOtp(''); setDevOtp(''); setEmailErr('');
     setSubmitting(true);
     try {
       const res = await authApi.sendSignupOtp(email.trim());
       if (res.devOtp) setDevOtp(res.devOtp);
+      if (res.emailError) setEmailErr(res.emailError);
       setResendSecs(30);
       setTimeout(() => otpRef.current?.focus(), 100);
     } catch (err) {
@@ -344,9 +347,10 @@ export default function Register() {
       {/* Dev mode — show OTP on screen when email service not configured */}
       {devOtp && (
         <div style={{background:'rgba(234,179,8,0.08)',border:'1px solid rgba(234,179,8,0.30)',borderRadius:10,padding:'12px 14px',marginBottom:14,display:'flex',flexDirection:'column',gap:5}}>
-          <span style={{fontFamily:"'DM Mono', monospace",fontSize:'0.56rem',color:'#CA8A04',letterSpacing:'0.12em',textTransform:'uppercase'}}>&#9888; Dev Mode — Email not configured</span>
+          <span style={{fontFamily:"'DM Mono', monospace",fontSize:'0.56rem',color:'#CA8A04',letterSpacing:'0.12em',textTransform:'uppercase'}}>&#9888; Email delivery failed — use this code</span>
           <span style={{fontFamily:"'DM Mono', monospace",fontSize:'1.8rem',fontWeight:700,color:'#FDE047',letterSpacing:'0.40em',textAlign:'center'}}>{devOtp}</span>
-          <span style={{fontSize:'0.70rem',color:'#A16207',lineHeight:1.4}}>Add EMAIL_USER &amp; EMAIL_APP_PASSWORD to .env to send real emails.</span>
+          {emailErr && <span style={{fontSize:'0.65rem',color:'#DC2626',lineHeight:1.4,wordBreak:'break-all'}}>Reason: {emailErr}</span>}
+          <span style={{fontSize:'0.70rem',color:'#A16207',lineHeight:1.4}}>Check EMAIL_USER &amp; EMAIL_APP_PASSWORD on server.</span>
         </div>
       )}
 

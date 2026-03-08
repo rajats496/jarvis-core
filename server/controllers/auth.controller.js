@@ -204,23 +204,26 @@ async function sendSignupOtp(req, res, next) {
     await otpDoc.setOtp(otp);
     await otpDoc.save();
 
-    const emailConfigured = !!(process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD);
-
     let emailSent = false;
+    let emailError = null;
     try {
-      await sendOtpEmail(normalized, otp, 'signup');
-      emailSent = emailConfigured; // true only if transport existed & succeeded
-      logger.info(`[auth] Signup OTP sent to ${normalized}`);
+      const result = await sendOtpEmail(normalized, otp, 'signup');
+      emailSent = result?.sent === true;
+      if (emailSent) logger.info(`[auth] Signup OTP emailed to ${normalized}`);
     } catch (emailErr) {
+      emailError = emailErr.message;
       logger.warn(`[auth] Email delivery failed for ${normalized}: ${emailErr.message}`);
     }
 
     const resp = {
       message: emailSent
         ? 'OTP sent to your email. Valid for 10 minutes.'
-        : 'Dev mode: check server console for OTP.',
+        : 'OTP generated. Email delivery failed — use the code shown below.',
     };
-    if (!emailSent) resp.devOtp = otp; // fallback: show OTP on screen
+    if (!emailSent) {
+      resp.devOtp = otp;
+      resp.emailError = emailError || 'Email credentials not configured on server';
+    }
     res.json(resp);
   } catch (err) {
     next(err);
@@ -302,19 +305,22 @@ async function forgotPassword(req, res, next) {
     await otpDoc.setOtp(otp);
     await otpDoc.save();
 
-    const emailConfigured = !!(process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD);
-
     let emailSent = false;
+    let emailError = null;
     try {
-      await sendOtpEmail(normalized, otp, 'reset');
-      emailSent = emailConfigured;
-      logger.info(`[auth] Reset OTP sent to ${normalized}`);
+      const result = await sendOtpEmail(normalized, otp, 'reset');
+      emailSent = result?.sent === true;
+      if (emailSent) logger.info(`[auth] Reset OTP emailed to ${normalized}`);
     } catch (emailErr) {
+      emailError = emailErr.message;
       logger.warn(`[auth] Reset email delivery failed for ${normalized}: ${emailErr.message}`);
     }
 
-    const resetResp = { message: 'If this email is registered, an OTP has been sent.' };
-    if (!emailSent) resetResp.devOtp = otp;
+    const resetResp = { message: emailSent ? 'If this email is registered, an OTP has been sent.' : 'OTP generated. Email delivery failed.' };
+    if (!emailSent) {
+      resetResp.devOtp = otp;
+      resetResp.emailError = emailError || 'Email credentials not configured on server';
+    }
     res.json(resetResp);
   } catch (err) {
     next(err);
