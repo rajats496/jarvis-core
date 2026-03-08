@@ -67,7 +67,12 @@ export function AuthProvider({ children }) {
     return u;
   }, [persistAuth]);
 
-  const value = { user, loading, login, register, logout, loginWithGoogle, isAuthenticated: !!user };
+  // Used after OTP-verified signup: accept already-fetched token + user
+  const loginWithToken = useCallback((token, userData) => {
+    persistAuth(token, userData);
+  }, [persistAuth]);
+
+  const value = { user, loading, login, register, logout, loginWithGoogle, loginWithToken, isAuthenticated: !!user };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
