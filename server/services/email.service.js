@@ -1,21 +1,28 @@
 /**
- * Email service — Resend HTTP API (no SMTP needed, works on all cloud hosts).
+ * Email service — Brevo (Sendinblue) HTTP API.
+ *
+ * Uses native fetch (Node 18+), no SMTP, no extra npm packages.
+ * Works on Render, Vercel, Railway, etc. (only needs HTTPS port 443).
+ *
+ * Setup (free — 300 emails/day):
+ *   1. Sign up at https://www.brevo.com (free)
+ *   2. Verify your sender email at https://app.brevo.com/senders
+ *      (just click the confirmation link Brevo sends you — no domain needed)
+ *   3. Get your API key at https://app.brevo.com/settings/keys/api
+ *   4. Set BREVO_API_KEY and BREVO_SENDER_EMAIL on Render
  *
  * Required env vars:
- *   RESEND_API_KEY      — API key from https://resend.com/api-keys
- *   EMAIL_FROM          — Verified sender   (default: "onboarding@resend.dev" for testing)
- *   EMAIL_FROM_NAME     — Display name      (default: "J.A.R.V.I.S")
- *
- * Free tier: 100 emails/day, 3 000/month.
- * For production, add & verify your own domain on Resend then set EMAIL_FROM.
+ *   BREVO_API_KEY       — API key from Brevo dashboard
+ *   BREVO_SENDER_EMAIL  — The verified sender email (the one you verified in step 2)
+ *   EMAIL_FROM_NAME     — Display name (default: "J.A.R.V.I.S")
  */
 
-const { Resend } = require('resend');
-const logger     = require('../utils/logger');
+const logger = require('../utils/logger');
 
-const RESEND_API_KEY = (process.env.RESEND_API_KEY || '').trim();
+const BREVO_API_KEY = (process.env.BREVO_API_KEY || '').trim();
+const BREVO_SENDER  = (process.env.BREVO_SENDER_EMAIL || '').trim();
 
-logger.info(`[email] RESEND_API_KEY present: ${!!RESEND_API_KEY}`);
+logger.info(`[email] BREVO_API_KEY present: ${!!BREVO_API_KEY}, BREVO_SENDER_EMAIL present: ${!!BREVO_SENDER}`);
 
 /**
  * Build the JARVIS-themed OTP HTML email.
@@ -57,45 +64,54 @@ function buildOtpHtml(otp, purpose, fromName) {
 }
 
 /**
- * Send a JARVIS-themed OTP email via Resend HTTP API.
+ * Send a JARVIS-themed OTP email via Brevo HTTP API.
  * @param {string} to         Recipient email
  * @param {string} otp        6-digit OTP
  * @param {'signup'|'reset'} purpose
  * @returns {{ sent: boolean, reason?: string }}
  */
 async function sendOtpEmail(to, otp, purpose) {
-  if (!RESEND_API_KEY) {
+  if (!BREVO_API_KEY || !BREVO_SENDER) {
     logger.info(`[email] DEV MODE — OTP for ${to} (${purpose}): ${otp}`);
-    return { sent: false, reason: 'RESEND_API_KEY not configured on server' };
+    return { sent: false, reason: 'BREVO_API_KEY or BREVO_SENDER_EMAIL not configured on server' };
   }
 
-  const fromName  = process.env.EMAIL_FROM_NAME || 'J.A.R.V.I.S';
-  const fromEmail = process.env.EMAIL_FROM || 'onboarding@resend.dev';
-  const from      = `${fromName} <${fromEmail}>`;
+  const fromName = process.env.EMAIL_FROM_NAME || 'J.A.R.V.I.S';
 
   const subjectMap = {
     signup: 'Your J.A.R.V.I.S Verification Code',
     reset:  'J.A.R.V.I.S Password Reset Code',
   };
 
-  const resend = new Resend(RESEND_API_KEY);
+  const payload = {
+    sender:      { name: fromName, email: BREVO_SENDER },
+    to:          [{ email: to }],
+    subject:     subjectMap[purpose],
+    htmlContent: buildOtpHtml(otp, purpose, fromName),
+    textContent: `Your J.A.R.V.I.S verification code is: ${otp}\n\nExpires in 10 minutes.`,
+  };
 
-  logger.info(`[email] Sending OTP to ${to} via Resend (from: ${fromEmail})…`);
+  logger.info(`[email] Sending OTP to ${to} via Brevo (sender: ${BREVO_SENDER})…`);
 
-  const { data, error } = await resend.emails.send({
-    from,
-    to: [to],
-    subject: subjectMap[purpose],
-    html: buildOtpHtml(otp, purpose, fromName),
-    text: `Your J.A.R.V.I.S verification code is: ${otp}\n\nExpires in 10 minutes.`,
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method:  'POST',
+    headers: {
+      'accept':       'application/json',
+      'content-type': 'application/json',
+      'api-key':      BREVO_API_KEY,
+    },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(15000), // 15 s hard ceiling
   });
 
-  if (error) {
-    logger.error(`[email] Resend API error: ${JSON.stringify(error)}`);
-    throw new Error(`Resend: ${error.message || JSON.stringify(error)}`);
+  const data = await res.json();
+
+  if (!res.ok) {
+    logger.error(`[email] Brevo API ${res.status}: ${JSON.stringify(data)}`);
+    throw new Error(`Brevo: ${data.message || JSON.stringify(data)}`);
   }
 
-  logger.info(`[email] OTP sent to ${to} — Resend ID: ${data?.id}`);
+  logger.info(`[email] OTP sent to ${to} — Brevo messageId: ${data.messageId}`);
   return { sent: true };
 }
 
