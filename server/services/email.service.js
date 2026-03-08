@@ -16,45 +16,64 @@ let transportVerified = false;
 // Log env-var presence once at module load (no values leaked)
 logger.info(`[email] EMAIL_USER present: ${!!process.env.EMAIL_USER}, EMAIL_APP_PASSWORD present: ${!!process.env.EMAIL_APP_PASSWORD}`);
 
+/**
+ * Try to create & verify an SMTP transport.
+ * Returns the transport on success, throws on failure.
+ */
+async function tryTransport(emailUser, emailPass, port, secure) {
+  const label = `smtp.gmail.com:${port}`;
+  logger.info(`[email] Trying ${label} (secure=${secure})…`);
+
+  const t = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port,
+    secure,                    // true for 465/SSL, false for 587/STARTTLS
+    auth: { user: emailUser, pass: emailPass },
+    connectionTimeout: 30000,  // 30 s — generous for cold cloud hosts
+    greetingTimeout:   20000,
+    socketTimeout:     20000,
+    ...(secure ? {} : { requireTLS: true }), // force STARTTLS on 587
+  });
+
+  await t.verify();            // throws if creds or connection fail
+  logger.info(`[email] ${label} verified OK`);
+  return t;
+}
+
 async function getTransporter() {
   if (transporter && transportVerified) return transporter;
 
   const emailUser = (process.env.EMAIL_USER || '').trim();
-  const emailPass = (process.env.EMAIL_APP_PASSWORD || '').replace(/\s+/g, ''); // strip accidental spaces
+  const emailPass = (process.env.EMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
 
   if (!emailUser || !emailPass) {
     logger.warn('[email] EMAIL_USER / EMAIL_APP_PASSWORD not set — email sending disabled');
     return null;
   }
 
-  logger.info(`[email] Creating SMTP transport for ${emailUser}`);
+  // Try port 587 (STARTTLS) first — works on most cloud hosts including Render.
+  // Fall back to 465 (SSL) if 587 is also blocked.
+  const attempts = [
+    { port: 587, secure: false },
+    { port: 465, secure: true },
+  ];
 
-  transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    auth: {
-      user: emailUser,
-      pass: emailPass,
-    },
-    connectionTimeout: 10000,
-    greetingTimeout:   10000,
-    socketTimeout:     15000,
-  });
-
-  // Eagerly verify SMTP creds — throws on bad password / blocked account
-  try {
-    await transporter.verify();
-    transportVerified = true;
-    logger.info('[email] SMTP transport verified OK');
-  } catch (verifyErr) {
-    logger.error(`[email] SMTP verify FAILED: ${verifyErr.message}`);
-    transporter = null;
-    transportVerified = false;
-    throw new Error(`SMTP auth failed: ${verifyErr.message}`);
+  let lastErr;
+  for (const { port, secure } of attempts) {
+    try {
+      transporter = await tryTransport(emailUser, emailPass, port, secure);
+      transportVerified = true;
+      return transporter;
+    } catch (err) {
+      lastErr = err;
+      logger.warn(`[email] smtp.gmail.com:${port} failed: ${err.message}`);
+    }
   }
 
-  return transporter;
+  // Both ports failed
+  transporter = null;
+  transportVerified = false;
+  throw new Error(`Gmail SMTP unreachable (tried 587 & 465): ${lastErr?.message}`);
 }
 
 /**
@@ -138,7 +157,7 @@ async function sendOtpEmail(to, otp, purpose) {
 </body>
 </html>`;
 
-  // Hard 20 s ceiling so the HTTP request never hangs
+  // Hard 45 s ceiling so the HTTP request never hangs
   const mailPromise = t.sendMail({
     from:    `"${fromName}" <${fromEmail}>`,
     to,
@@ -148,7 +167,7 @@ async function sendOtpEmail(to, otp, purpose) {
   });
 
   const timeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('Email send timed out after 20 s')), 20000)
+    setTimeout(() => reject(new Error('Email send timed out after 45 s')), 45000)
   );
 
   await Promise.race([mailPromise, timeout]);
