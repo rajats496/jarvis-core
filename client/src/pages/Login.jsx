@@ -29,6 +29,7 @@ export default function Login() {
   const [fpSubmitting, setFpSubmitting] = useState(false);
   const [fpError,      setFpError]      = useState('');
   const [fpShowPass,   setFpShowPass]   = useState(false);
+  const [fpDevOtp,     setFpDevOtp]     = useState(''); // shown on screen in dev mode
   const fpOtpRef = useRef(null);
 
   /* Countdown for FP resend */
@@ -83,7 +84,8 @@ export default function Login() {
     if (!fpEmail.trim()) { setFpError('Please enter your email address.'); return; }
     setFpSubmitting(true);
     try {
-      await authApi.forgotPassword(fpEmail.trim());
+      const res = await authApi.forgotPassword(fpEmail.trim());
+      if (res.devOtp) setFpDevOtp(res.devOtp);
       setFpStep(2);
       setFpResendSecs(30);
       setTimeout(() => fpOtpRef.current?.focus(), 100);
@@ -123,10 +125,11 @@ export default function Login() {
 
   const handleFpResend = async () => {
     if (fpResendSecs > 0 || fpSubmitting) return;
-    setFpError(''); setFpOtp('');
+    setFpError(''); setFpOtp(''); setFpDevOtp('');
     setFpSubmitting(true);
     try {
-      await authApi.forgotPassword(fpEmail.trim());
+      const res = await authApi.forgotPassword(fpEmail.trim());
+      if (res.devOtp) setFpDevOtp(res.devOtp);
       setFpResendSecs(30);
       setTimeout(() => fpOtpRef.current?.focus(), 100);
     } catch (err) {
@@ -134,7 +137,7 @@ export default function Login() {
     } finally { setFpSubmitting(false); }
   };
 
-  const closeFp = () => { setFpStep(0); setFpEmail(''); setFpOtp(''); setFpPass(''); setFpError(''); setFpResetToken(''); };
+  const closeFp = () => { setFpStep(0); setFpEmail(''); setFpOtp(''); setFpPass(''); setFpError(''); setFpResetToken(''); setFpDevOtp(''); };
 
   const inp = (field) => ({
     width: '100%',
@@ -441,6 +444,12 @@ export default function Login() {
               {/* Step 2: OTP */}
               {fpStep===2 && (
                 <form onSubmit={handleFpVerifyOtp}>
+                  {fpDevOtp && (
+                    <div style={{background:'rgba(234,179,8,0.08)',border:'1px solid rgba(234,179,8,0.30)',borderRadius:10,padding:'10px 14px',marginBottom:12,display:'flex',flexDirection:'column',gap:4}}>
+                      <span style={{fontFamily:"'DM Mono', monospace",fontSize:'0.56rem',color:'#CA8A04',letterSpacing:'0.12em',textTransform:'uppercase'}}>&#9888; Dev Mode — Email not configured</span>
+                      <span style={{fontFamily:"'DM Mono', monospace",fontSize:'1.6rem',fontWeight:700,color:'#FDE047',letterSpacing:'0.40em',textAlign:'center'}}>{fpDevOtp}</span>
+                    </div>
+                  )}
                   <div style={{marginBottom:'0.6rem'}}>
                     <label style={{display:'block',fontFamily:"'DM Mono', monospace",fontSize:'0.59rem',color:'#2E3545',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:'0.45rem'}}>Verification Code</label>
                     <input ref={fpOtpRef} type="text" inputMode="numeric" maxLength={6} placeholder="_ _ _ _ _ _"

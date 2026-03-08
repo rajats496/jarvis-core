@@ -204,10 +204,13 @@ async function sendSignupOtp(req, res, next) {
     await otpDoc.setOtp(otp);
     await otpDoc.save();
 
+    const emailConfigured = !!(process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD);
     await sendOtpEmail(normalized, otp, 'signup');
     logger.info(`[auth] Signup OTP sent to ${normalized}`);
 
-    res.json({ message: 'OTP sent to your email. Valid for 10 minutes.' });
+    const resp = { message: emailConfigured ? 'OTP sent to your email. Valid for 10 minutes.' : 'Dev mode: check server console for OTP.' };
+    if (!emailConfigured) resp.devOtp = otp; // expose on screen when email not configured
+    res.json(resp);
   } catch (err) {
     next(err);
   }
@@ -288,10 +291,13 @@ async function forgotPassword(req, res, next) {
     await otpDoc.setOtp(otp);
     await otpDoc.save();
 
+    const emailConfigured = !!(process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD);
     await sendOtpEmail(normalized, otp, 'reset');
     logger.info(`[auth] Reset OTP sent to ${normalized}`);
 
-    res.json({ message: 'If this email is registered, an OTP has been sent.' });
+    const resetResp = { message: 'If this email is registered, an OTP has been sent.' };
+    if (!emailConfigured) resetResp.devOtp = otp;
+    res.json(resetResp);
   } catch (err) {
     next(err);
   }

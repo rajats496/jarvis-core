@@ -25,11 +25,17 @@ export default function Register() {
 
   /* â”€â”€ Step 2 (OTP) state â”€â”€ */
   const [otp,        setOtp]        = useState('');
-  const [resendSecs, setResendSecs] = useState(0); // countdown
-  const otpRef = useRef(null);
+  const [resendSecs, setResendSecs] = useState(0); // countdown  const [devOtp,     setDevOtp]     = useState(''); // shown on screen when email not configured  const otpRef = useRef(null);
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   const googleEnabled  = googleClientId && googleClientId !== 'YOUR_GOOGLE_CLIENT_ID_HERE';
+
+  /* â"€â"€ Resend countdown (must be before any early return) â"€â"€ */
+  useEffect(() => {
+    if (resendSecs <= 0) return;
+    const id = setTimeout(() => setResendSecs(s => s - 1), 1000);
+    return () => clearTimeout(id);
+  }, [resendSecs]);
 
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
 
@@ -48,12 +54,6 @@ export default function Register() {
     boxShadow: focused === field ? '0 0 0 3px rgba(160,190,230,0.06)' : 'none',
   });
 
-  /* â”€â”€ Resend countdown â”€â”€ */
-  useEffect(() => {
-    if (resendSecs <= 0) return;
-    const id = setTimeout(() => setResendSecs(s => s - 1), 1000);
-    return () => clearTimeout(id);
-  }, [resendSecs]);
 
   /* â”€â”€ STEP 1: Send OTP â”€â”€ */
   const handleSendOtp = async (e) => {
@@ -64,12 +64,18 @@ export default function Register() {
     if (password.length < 6)  { setError('Password must be at least 6 characters.'); return; }
     setSubmitting(true);
     try {
-      await authApi.sendSignupOtp(email.trim());
+      const res = await authApi.sendSignupOtp(email.trim());
+      if (res.devOtp) setDevOtp(res.devOtp); // dev mode: display OTP on screen
       setStep(2);
       setResendSecs(30);
       setTimeout(() => otpRef.current?.focus(), 100);
     } catch (err) {
-      setError(err.response?.data?.error || (err.code === 'ERR_NETWORK' ? 'Cannot reach server.' : err.message) || 'Failed to send OTP.');
+      const msg = err.response?.data?.error
+        || (err.code === 'ERR_NETWORK' || err.code === 'ECONNABORTED'
+          ? 'Cannot reach server. Make sure the backend is running.'
+          : err.message)
+        || 'Failed to send OTP.';
+      setError(msg);
     } finally { setSubmitting(false); }
   };
 
@@ -91,10 +97,11 @@ export default function Register() {
   /* â”€â”€ Resend OTP â”€â”€ */
   const handleResend = async () => {
     if (resendSecs > 0 || submitting) return;
-    setError(''); setOtp('');
+    setError(''); setOtp(''); setDevOtp('');
     setSubmitting(true);
     try {
-      await authApi.sendSignupOtp(email.trim());
+      const res = await authApi.sendSignupOtp(email.trim());
+      if (res.devOtp) setDevOtp(res.devOtp);
       setResendSecs(30);
       setTimeout(() => otpRef.current?.focus(), 100);
     } catch (err) {
@@ -316,11 +323,20 @@ export default function Register() {
       <div style={{fontFamily:"'Orbitron', monospace",fontSize:'0.82rem',fontWeight:600,color:'#EEF2FF',letterSpacing:'0.08em',marginBottom:'0.28rem'}}>
         Verify your email
       </div>
-      <div style={{fontSize:'0.85rem',color:'#6E7A90',marginBottom:'1.5rem',lineHeight:1.55}}>
+      <div style={{fontSize:'0.85rem',color:'#6E7A90',marginBottom:'1.2rem',lineHeight:1.55}}>
         A 6-digit code was sent to{' '}
         <span style={{color:'#B8C4D8',fontFamily:"'DM Mono', monospace",fontSize:'0.8rem'}}>{email}</span>.
         {' '}Enter it below to activate your account.
       </div>
+
+      {/* Dev mode — show OTP on screen when email service not configured */}
+      {devOtp && (
+        <div style={{background:'rgba(234,179,8,0.08)',border:'1px solid rgba(234,179,8,0.30)',borderRadius:10,padding:'12px 14px',marginBottom:14,display:'flex',flexDirection:'column',gap:5}}>
+          <span style={{fontFamily:"'DM Mono', monospace",fontSize:'0.56rem',color:'#CA8A04',letterSpacing:'0.12em',textTransform:'uppercase'}}>&#9888; Dev Mode — Email not configured</span>
+          <span style={{fontFamily:"'DM Mono', monospace",fontSize:'1.8rem',fontWeight:700,color:'#FDE047',letterSpacing:'0.40em',textAlign:'center'}}>{devOtp}</span>
+          <span style={{fontSize:'0.70rem',color:'#A16207',lineHeight:1.4}}>Add EMAIL_USER &amp; EMAIL_APP_PASSWORD to .env to send real emails.</span>
+        </div>
+      )}
 
       <ErrorBox />
 
