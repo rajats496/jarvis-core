@@ -23,9 +23,13 @@ export default function Register() {
   const [error,      setError]      = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  /* â”€â”€ Step 2 (OTP) state â”€â”€ */
+  /* ── Step 2 (OTP) state ── */
   const [otp,        setOtp]        = useState('');
-  const [resendSecs, setResendSecs] = useState(0); // countdown  const [devOtp,     setDevOtp]     = useState(''); // shown on screen when email not configured  const otpRef = useRef(null);
+  const [resendSecs, setResendSecs] = useState(0);
+  const [devOtp,     setDevOtp]     = useState('');
+  const [slowReq,    setSlowReq]    = useState(false);
+  const otpRef  = useRef(null);
+  const slowRef = useRef(null);
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   const googleEnabled  = googleClientId && googleClientId !== 'YOUR_GOOGLE_CLIENT_ID_HERE';
@@ -63,6 +67,8 @@ export default function Register() {
     if (!password)            { setError('Password is required.'); return; }
     if (password.length < 6)  { setError('Password must be at least 6 characters.'); return; }
     setSubmitting(true);
+    setSlowReq(false);
+    slowRef.current = setTimeout(() => setSlowReq(true), 6000);
     try {
       const res = await authApi.sendSignupOtp(email.trim());
       if (res.devOtp) setDevOtp(res.devOtp); // dev mode: display OTP on screen
@@ -70,13 +76,19 @@ export default function Register() {
       setResendSecs(30);
       setTimeout(() => otpRef.current?.focus(), 100);
     } catch (err) {
+      const isTimeout = err.code === 'ECONNABORTED';
+      const isDown    = err.code === 'ERR_NETWORK';
       const msg = err.response?.data?.error
-        || (err.code === 'ERR_NETWORK' || err.code === 'ECONNABORTED'
-          ? 'Cannot reach server. Make sure the backend is running.'
-          : err.message)
+        || (isTimeout ? 'Server is taking too long to respond. It may be starting up — please try again in 30 seconds.' : null)
+        || (isDown    ? 'Cannot reach server. Check your internet connection.' : null)
+        || err.message
         || 'Failed to send OTP.';
       setError(msg);
-    } finally { setSubmitting(false); }
+    } finally {
+      clearTimeout(slowRef.current);
+      setSlowReq(false);
+      setSubmitting(false);
+    }
   };
 
   /* â”€â”€ STEP 2: Verify OTP â”€â”€ */
@@ -297,7 +309,7 @@ export default function Register() {
             onMouseEnter={e=>{if(!submitting){e.currentTarget.style.background='linear-gradient(135deg,#262E3E,#384050)';e.currentTarget.style.borderColor='rgba(210,225,250,0.32)';e.currentTarget.style.color='#F0F4FF'}}}
             onMouseLeave={e=>{if(!submitting){e.currentTarget.style.background='linear-gradient(135deg,#1E2430,#2C3448)';e.currentTarget.style.borderColor='rgba(180,200,230,0.20)';e.currentTarget.style.color='#C8D8F0'}}}>
             <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(200,220,255,0.26),transparent)'}}/>
-            {submitting?<><span style={{width:12,height:12,border:'1.5px solid rgba(200,220,255,0.20)',borderTopColor:'#B8C4D8',borderRadius:'50%',display:'inline-block',animation:'spin 0.8s linear infinite'}}/>SENDING CODEâ€¦</>:'SEND VERIFICATION CODE'}
+            {submitting?<><span style={{width:12,height:12,border:'1.5px solid rgba(200,220,255,0.20)',borderTopColor:'#B8C4D8',borderRadius:'50%',display:'inline-block',animation:'spin 0.8s linear infinite'}}/>{slowReq?'SERVER WAKING UP\u2026':'SENDING CODE\u2026'}</>:'SEND VERIFICATION CODE'}
           </button>
         </form>
 

@@ -15,7 +15,7 @@ const apiBase =
 export const api = axios.create({
   baseURL: apiBase,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 30000, // 30 s — prevents infinite spinner on Render cold start
+  timeout: 65000, // 65 s — Render free tier can take up to 60 s to wake from sleep
 });
 
 let isRefreshing = false;
