@@ -205,11 +205,22 @@ async function sendSignupOtp(req, res, next) {
     await otpDoc.save();
 
     const emailConfigured = !!(process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD);
-    await sendOtpEmail(normalized, otp, 'signup');
-    logger.info(`[auth] Signup OTP sent to ${normalized}`);
 
-    const resp = { message: emailConfigured ? 'OTP sent to your email. Valid for 10 minutes.' : 'Dev mode: check server console for OTP.' };
-    if (!emailConfigured) resp.devOtp = otp; // expose on screen when email not configured
+    let emailSent = false;
+    try {
+      await sendOtpEmail(normalized, otp, 'signup');
+      emailSent = emailConfigured; // true only if transport existed & succeeded
+      logger.info(`[auth] Signup OTP sent to ${normalized}`);
+    } catch (emailErr) {
+      logger.warn(`[auth] Email delivery failed for ${normalized}: ${emailErr.message}`);
+    }
+
+    const resp = {
+      message: emailSent
+        ? 'OTP sent to your email. Valid for 10 minutes.'
+        : 'Dev mode: check server console for OTP.',
+    };
+    if (!emailSent) resp.devOtp = otp; // fallback: show OTP on screen
     res.json(resp);
   } catch (err) {
     next(err);
@@ -292,11 +303,18 @@ async function forgotPassword(req, res, next) {
     await otpDoc.save();
 
     const emailConfigured = !!(process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD);
-    await sendOtpEmail(normalized, otp, 'reset');
-    logger.info(`[auth] Reset OTP sent to ${normalized}`);
+
+    let emailSent = false;
+    try {
+      await sendOtpEmail(normalized, otp, 'reset');
+      emailSent = emailConfigured;
+      logger.info(`[auth] Reset OTP sent to ${normalized}`);
+    } catch (emailErr) {
+      logger.warn(`[auth] Reset email delivery failed for ${normalized}: ${emailErr.message}`);
+    }
 
     const resetResp = { message: 'If this email is registered, an OTP has been sent.' };
-    if (!emailConfigured) resetResp.devOtp = otp;
+    if (!emailSent) resetResp.devOtp = otp;
     res.json(resetResp);
   } catch (err) {
     next(err);

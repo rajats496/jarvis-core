@@ -26,6 +26,9 @@ function getTransporter() {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_APP_PASSWORD,
     },
+    connectionTimeout: 8000,   // 8 s to establish TCP connection
+    greetingTimeout:   8000,   // 8 s for SMTP greeting
+    socketTimeout:     15000,  // 15 s for socket inactivity
   });
 
   return transporter;
@@ -106,7 +109,8 @@ async function sendOtpEmail(to, otp, purpose) {
 </body>
 </html>`;
 
-  await t.sendMail({
+  // Hard 20 s ceiling so the HTTP request never hangs
+  const mailPromise = t.sendMail({
     from:    `"${fromName}" <${fromEmail}>`,
     to,
     subject: subjectMap[purpose],
@@ -114,6 +118,11 @@ async function sendOtpEmail(to, otp, purpose) {
     text: `Your J.A.R.V.I.S verification code is: ${otp}\n\nExpires in 10 minutes.`,
   });
 
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Email send timed out after 20 s')), 20000)
+  );
+
+  await Promise.race([mailPromise, timeout]);
   logger.info(`[email] OTP sent to ${to} (purpose: ${purpose})`);
 }
 
