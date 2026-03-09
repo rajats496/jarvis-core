@@ -1,28 +1,51 @@
 /**
- * Email service — Brevo (Sendinblue) HTTP API.
+ * Email service — Gmail REST API via googleapis.
  *
- * Uses native fetch (Node 18+), no SMTP, no extra npm packages.
- * Works on Render, Vercel, Railway, etc. (only needs HTTPS port 443).
+ * Pure HTTPS (port 443) — works on Render, never blocked.
+ * Uses your own Gmail account. Free, works immediately after OAuth2 setup.
  *
- * Setup (free — 300 emails/day):
- *   1. Sign up at https://www.brevo.com (free)
- *   2. Verify your sender email at https://app.brevo.com/senders
- *      (just click the confirmation link Brevo sends you — no domain needed)
- *   3. Get your API key at https://app.brevo.com/settings/keys/api
- *   4. Set BREVO_API_KEY and BREVO_SENDER_EMAIL on Render
+ * ── One-time setup (~10 min) ─────────────────────────────────────────────────
  *
- * Required env vars:
- *   BREVO_API_KEY       — API key from Brevo dashboard
- *   BREVO_SENDER_EMAIL  — The verified sender email (the one you verified in step 2)
- *   EMAIL_FROM_NAME     — Display name (default: "J.A.R.V.I.S")
+ * STEP 1 — Create OAuth2 credentials in Google Cloud Console:
+ *   1. Go to https://console.cloud.google.com → New Project → Create
+ *   2. APIs & Services → Library → search "Gmail API" → Enable
+ *   3. APIs & Services → Credentials → + Create Credentials → OAuth client ID
+ *   4. Application type: Web application
+ *   5. Authorized redirect URI: https://developers.google.com/oauthplayground
+ *   6. Create → copy the Client ID and Client Secret
+ *
+ * STEP 2 — Get a Refresh Token:
+ *   1. Go to https://developers.google.com/oauthplayground
+ *   2. Gear icon (top right) → check "Use your own OAuth credentials"
+ *   3. Paste your Client ID + Client Secret → Close
+ *   4. On the left, scroll to "Gmail API v1" → select:  https://mail.google.com/
+ *   5. Click "Authorize APIs" → sign in with www.rajatsri@gmail.com → Allow
+ *   6. Click "Exchange authorization code for tokens"
+ *   7. Copy the "Refresh token"
+ *
+ * STEP 3 — Add these 4 vars to Render environment:
+ *   GMAIL_USER           = www.rajatsri@gmail.com
+ *   GMAIL_CLIENT_ID      = (from Step 1)
+ *   GMAIL_CLIENT_SECRET  = (from Step 1)
+ *   GMAIL_REFRESH_TOKEN  = (from Step 2)
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 
-const logger = require('../utils/logger');
+const { google } = require('googleapis');
+const logger     = require('../utils/logger');
 
-const BREVO_API_KEY = (process.env.BREVO_API_KEY || '').trim();
-const BREVO_SENDER  = (process.env.BREVO_SENDER_EMAIL || '').trim();
+const GMAIL_USER          = (process.env.GMAIL_USER          || '').trim();
+const GMAIL_CLIENT_ID     = (process.env.GMAIL_CLIENT_ID     || '').trim();
+const GMAIL_CLIENT_SECRET = (process.env.GMAIL_CLIENT_SECRET || '').trim();
+const GMAIL_REFRESH_TOKEN = (process.env.GMAIL_REFRESH_TOKEN || '').trim();
 
-logger.info(`[email] BREVO_API_KEY present: ${!!BREVO_API_KEY}, BREVO_SENDER_EMAIL present: ${!!BREVO_SENDER}`);
+const emailConfigured = !!(GMAIL_USER && GMAIL_CLIENT_ID && GMAIL_CLIENT_SECRET && GMAIL_REFRESH_TOKEN);
+
+logger.info(
+  `[email] Gmail API ready: ${emailConfigured} ` +
+  `(user=${!!GMAIL_USER} clientId=${!!GMAIL_CLIENT_ID} secret=${!!GMAIL_CLIENT_SECRET} refresh=${!!GMAIL_REFRESH_TOKEN})`
+);
 
 /**
  * Build the JARVIS-themed OTP HTML email.
@@ -64,16 +87,46 @@ function buildOtpHtml(otp, purpose, fromName) {
 }
 
 /**
- * Send a JARVIS-themed OTP email via Brevo HTTP API.
+ * Build a base64url-encoded RFC-2822 MIME email (required by Gmail API).
+ */
+function encodeRawEmail(to, subject, html, text, fromAddress, fromName) {
+  const boundary = `_jarvis_${Date.now()}`;
+  const lines = [
+    `From: "${fromName}" <${fromAddress}>`,
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    `MIME-Version: 1.0`,
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    ``,
+    `--${boundary}`,
+    `Content-Type: text/plain; charset="UTF-8"`,
+    ``,
+    text,
+    ``,
+    `--${boundary}`,
+    `Content-Type: text/html; charset="UTF-8"`,
+    ``,
+    html,
+    ``,
+    `--${boundary}--`,
+  ];
+  return Buffer.from(lines.join('\r\n')).toString('base64url');
+}
+
+/**
+ * Send a JARVIS-themed OTP email via Gmail REST API.
  * @param {string} to         Recipient email
  * @param {string} otp        6-digit OTP
  * @param {'signup'|'reset'} purpose
  * @returns {{ sent: boolean, reason?: string }}
  */
 async function sendOtpEmail(to, otp, purpose) {
-  if (!BREVO_API_KEY || !BREVO_SENDER) {
+  if (!emailConfigured) {
     logger.info(`[email] DEV MODE — OTP for ${to} (${purpose}): ${otp}`);
-    return { sent: false, reason: 'BREVO_API_KEY or BREVO_SENDER_EMAIL not configured on server' };
+    return {
+      sent: false,
+      reason: 'Gmail API not configured (need GMAIL_USER, GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN)',
+    };
   }
 
   const fromName = process.env.EMAIL_FROM_NAME || 'J.A.R.V.I.S';
@@ -83,35 +136,32 @@ async function sendOtpEmail(to, otp, purpose) {
     reset:  'J.A.R.V.I.S Password Reset Code',
   };
 
-  const payload = {
-    sender:      { name: fromName, email: BREVO_SENDER },
-    to:          [{ email: to }],
-    subject:     subjectMap[purpose],
-    htmlContent: buildOtpHtml(otp, purpose, fromName),
-    textContent: `Your J.A.R.V.I.S verification code is: ${otp}\n\nExpires in 10 minutes.`,
-  };
+  const oauth2Client = new google.auth.OAuth2(
+    GMAIL_CLIENT_ID,
+    GMAIL_CLIENT_SECRET,
+    'https://developers.google.com/oauthplayground'
+  );
+  oauth2Client.setCredentials({ refresh_token: GMAIL_REFRESH_TOKEN });
 
-  logger.info(`[email] Sending OTP to ${to} via Brevo (sender: ${BREVO_SENDER})…`);
+  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method:  'POST',
-    headers: {
-      'accept':       'application/json',
-      'content-type': 'application/json',
-      'api-key':      BREVO_API_KEY,
-    },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(15000), // 15 s hard ceiling
+  const raw = encodeRawEmail(
+    to,
+    subjectMap[purpose],
+    buildOtpHtml(otp, purpose, fromName),
+    `Your J.A.R.V.I.S verification code is: ${otp}\n\nExpires in 10 minutes.`,
+    GMAIL_USER,
+    fromName
+  );
+
+  logger.info(`[email] Sending OTP to ${to} via Gmail API…`);
+
+  const result = await gmail.users.messages.send({
+    userId: 'me',
+    requestBody: { raw },
   });
 
-  const data = await res.json();
-
-  if (!res.ok) {
-    logger.error(`[email] Brevo API ${res.status}: ${JSON.stringify(data)}`);
-    throw new Error(`Brevo: ${data.message || JSON.stringify(data)}`);
-  }
-
-  logger.info(`[email] OTP sent to ${to} — Brevo messageId: ${data.messageId}`);
+  logger.info(`[email] OTP sent to ${to} — Gmail messageId: ${result.data.id}`);
   return { sent: true };
 }
 
