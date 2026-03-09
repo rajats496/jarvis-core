@@ -1,51 +1,44 @@
 /**
- * Email service — Gmail REST API via googleapis.
+ * Email service — Brevo (formerly Sendinblue) Transactional Email REST API.
  *
  * Pure HTTPS (port 443) — works on Render, never blocked.
- * Uses your own Gmail account. Free, works immediately after OAuth2 setup.
+ * Free tier: 300 emails/day, no credit card needed.
  *
- * ── One-time setup (~10 min) ─────────────────────────────────────────────────
+ * ── One-time setup (~3 min) ──────────────────────────────────────────────────
  *
- * STEP 1 — Create OAuth2 credentials in Google Cloud Console:
- *   1. Go to https://console.cloud.google.com → New Project → Create
- *   2. APIs & Services → Library → search "Gmail API" → Enable
- *   3. APIs & Services → Credentials → + Create Credentials → OAuth client ID
- *   4. Application type: Web application
- *   5. Authorized redirect URI: https://developers.google.com/oauthplayground
- *   6. Create → copy the Client ID and Client Secret
+ * STEP 1 — Create a free Brevo account:
+ *   1. Go to https://app.brevo.com → sign up (free)
+ *   2. Verify your email address
  *
- * STEP 2 — Get a Refresh Token:
- *   1. Go to https://developers.google.com/oauthplayground
- *   2. Gear icon (top right) → check "Use your own OAuth credentials"
- *   3. Paste your Client ID + Client Secret → Close
- *   4. On the left, scroll to "Gmail API v1" → select:  https://mail.google.com/
- *   5. Click "Authorize APIs" → sign in with www.rajatsri@gmail.com → Allow
- *   6. Click "Exchange authorization code for tokens"
- *   7. Copy the "Refresh token"
+ * STEP 2 — Get your API key:
+ *   1. Top-right avatar → SMTP & API → API Keys tab
+ *   2. Click "Generate a new API key" → name it "jarvis" → Copy it
  *
- * STEP 3 — Add these 4 vars to Render environment:
- *   GMAIL_USER           = www.rajatsri@gmail.com
- *   GMAIL_CLIENT_ID      = (from Step 1)
- *   GMAIL_CLIENT_SECRET  = (from Step 1)
- *   GMAIL_REFRESH_TOKEN  = (from Step 2)
- *   FRONTEND_URL         = https://jarvis-ai-assistance.vercel.app
+ * STEP 3 — Verify your sender email:
+ *   1. Left menu → Senders & IP → Senders
+ *   2. Click "Add a sender" → enter your name + www.rajatsri@gmail.com → Save
+ *   3. Check your Gmail inbox → click the verification link Brevo sent
+ *
+ * STEP 4 — Add to Render environment:
+ *   BREVO_API_KEY      = (from Step 2)
+ *   BREVO_SENDER_EMAIL = www.rajatsri@gmail.com
+ *   BREVO_SENDER_NAME  = J.A.R.V.I.S
+ *   FRONTEND_URL       = https://jarvis-ai-assistance.vercel.app
  *
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-const { google } = require('googleapis');
-const logger     = require('../utils/logger');
+const logger = require('../utils/logger');
 
-const GMAIL_USER          = (process.env.GMAIL_USER          || '').trim();
-const GMAIL_CLIENT_ID     = (process.env.GMAIL_CLIENT_ID     || '').trim();
-const GMAIL_CLIENT_SECRET = (process.env.GMAIL_CLIENT_SECRET || '').trim();
-const GMAIL_REFRESH_TOKEN = (process.env.GMAIL_REFRESH_TOKEN || '').trim();
+const BREVO_API_KEY      = (process.env.BREVO_API_KEY      || '').trim();
+const BREVO_SENDER_EMAIL = (process.env.BREVO_SENDER_EMAIL || '').trim();
+const BREVO_SENDER_NAME  = (process.env.BREVO_SENDER_NAME  || 'J.A.R.V.I.S').trim();
 
-const emailConfigured = !!(GMAIL_USER && GMAIL_CLIENT_ID && GMAIL_CLIENT_SECRET && GMAIL_REFRESH_TOKEN);
+const emailConfigured = !!(BREVO_API_KEY && BREVO_SENDER_EMAIL);
 
 logger.info(
-  `[email] Gmail API ready: ${emailConfigured} ` +
-  `(user=${!!GMAIL_USER} clientId=${!!GMAIL_CLIENT_ID} secret=${!!GMAIL_CLIENT_SECRET} refresh=${!!GMAIL_REFRESH_TOKEN})`
+  `[email] Brevo ready: ${emailConfigured} ` +
+  `(apiKey=${!!BREVO_API_KEY} sender=${!!BREVO_SENDER_EMAIL})`
 );
 
 /**
@@ -102,50 +95,21 @@ function buildLinkHtml(link, purpose, fromName) {
 }
 
 /**
- * Build a base64url-encoded RFC-2822 MIME email (required by Gmail API).
- */
-function encodeRawEmail(to, subject, html, text, fromAddress, fromName) {
-  const boundary = `_jarvis_${Date.now()}`;
-  const lines = [
-    `From: "${fromName}" <${fromAddress}>`,
-    `To: ${to}`,
-    `Subject: ${subject}`,
-    `MIME-Version: 1.0`,
-    `Content-Type: multipart/alternative; boundary="${boundary}"`,
-    ``,
-    `--${boundary}`,
-    `Content-Type: text/plain; charset="UTF-8"`,
-    ``,
-    text,
-    ``,
-    `--${boundary}`,
-    `Content-Type: text/html; charset="UTF-8"`,
-    ``,
-    html,
-    ``,
-    `--${boundary}--`,
-  ];
-  return Buffer.from(lines.join('\r\n')).toString('base64url');
-}
-
-/**
- * Send a JARVIS-themed verification link email via Gmail REST API.
+ * Send a JARVIS-themed verification link email via Brevo REST API.
  * @param {string} to         Recipient email
  * @param {string} link       Full URL the user should click
  * @param {'signup'|'reset'} purpose
- * @returns {{ sent: boolean, reason?: string }}
+ * @returns {{ sent: boolean, reason?: string, devLink?: string }}
  */
 async function sendLinkEmail(to, link, purpose) {
   if (!emailConfigured) {
     logger.info(`[email] DEV MODE — Link for ${to} (${purpose}): ${link}`);
     return {
       sent: false,
-      reason: 'Gmail API not configured (need GMAIL_USER, GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN)',
+      reason: 'Brevo not configured (need BREVO_API_KEY and BREVO_SENDER_EMAIL)',
       devLink: link,
     };
   }
-
-  const fromName = process.env.EMAIL_FROM_NAME || 'J.A.R.V.I.S';
 
   const subjectMap = {
     signup: 'Verify your J.A.R.V.I.S email address',
@@ -157,32 +121,33 @@ async function sendLinkEmail(to, link, purpose) {
     reset:  `Reset your J.A.R.V.I.S password by visiting this link:\n${link}\n\nExpires in 1 hour.`,
   };
 
-  const oauth2Client = new google.auth.OAuth2(
-    GMAIL_CLIENT_ID,
-    GMAIL_CLIENT_SECRET,
-    'https://developers.google.com/oauthplayground'
-  );
-  oauth2Client.setCredentials({ refresh_token: GMAIL_REFRESH_TOKEN });
-
-  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-
-  const raw = encodeRawEmail(
-    to,
-    subjectMap[purpose],
-    buildLinkHtml(link, purpose, fromName),
-    textMap[purpose],
-    GMAIL_USER,
-    fromName
-  );
-
-  logger.info(`[email] Sending ${purpose} link to ${to} via Gmail API…`);
-
-  const result = await gmail.users.messages.send({
-    userId: 'me',
-    requestBody: { raw },
+  const body = JSON.stringify({
+    sender:      { name: BREVO_SENDER_NAME, email: BREVO_SENDER_EMAIL },
+    to:          [{ email: to }],
+    subject:     subjectMap[purpose],
+    htmlContent: buildLinkHtml(link, purpose, BREVO_SENDER_NAME),
+    textContent: textMap[purpose],
   });
 
-  logger.info(`[email] Link email sent to ${to} — Gmail messageId: ${result.data.id}`);
+  logger.info(`[email] Sending ${purpose} link to ${to} via Brevo…`);
+
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method:  'POST',
+    headers: {
+      'accept':       'application/json',
+      'api-key':      BREVO_API_KEY,
+      'content-type': 'application/json',
+    },
+    body,
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Brevo API error ${res.status}: ${errText}`);
+  }
+
+  const data = await res.json();
+  logger.info(`[email] Link email sent to ${to} — Brevo messageId: ${data.messageId}`);
   return { sent: true };
 }
 
