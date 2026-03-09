@@ -12,6 +12,8 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import VerifyEmail from './pages/VerifyEmail';
+import ResetPassword from './pages/ResetPassword';
 
 const router = createBrowserRouter(
   [
@@ -37,6 +39,8 @@ const router = createBrowserRouter(
             </ProtectedRoute>
           ),
         },
+        { path: '/verify-email', element: <VerifyEmail /> },
+        { path: '/reset-password', element: <ResetPassword /> },
         { path: '*', element: <Navigate to="/" replace /> },
       ],
     },

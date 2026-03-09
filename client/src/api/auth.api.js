@@ -25,14 +25,14 @@ export async function googleAuth(accessToken) {
   return data;
 }
 
-/* ── OTP signup ── */
-export async function sendSignupOtp(email) {
-  const { data } = await api.post('/auth/send-otp', { email });
+/* ── Email link signup ── */
+export async function sendVerificationEmail(email, password, name = '') {
+  const { data } = await api.post('/auth/send-verification', { email, password, name });
   return data;
 }
 
-export async function verifySignupOtp(email, otp, password, name = '') {
-  const { data } = await api.post('/auth/verify-otp', { email, otp, password, name });
+export async function verifyEmailToken(token, email) {
+  const { data } = await api.post('/auth/verify-email', { token, email });
   return data;
 }
 
@@ -42,12 +42,8 @@ export async function forgotPassword(email) {
   return data;
 }
 
-export async function verifyResetOtp(email, otp) {
-  const { data } = await api.post('/auth/verify-reset-otp', { email, otp });
+export async function resetPassword(token, email, password) {
+  const { data } = await api.post('/auth/reset-password', { token, email, password });
   return data;
 }
 
-export async function resetPassword(resetToken, password) {
-  const { data } = await api.post('/auth/reset-password', { resetToken, password });
-  return data;
-}

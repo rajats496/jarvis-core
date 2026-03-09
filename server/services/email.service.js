@@ -28,6 +28,7 @@
  *   GMAIL_CLIENT_ID      = (from Step 1)
  *   GMAIL_CLIENT_SECRET  = (from Step 1)
  *   GMAIL_REFRESH_TOKEN  = (from Step 2)
+ *   FRONTEND_URL         = https://jarvis-ai-assistance.vercel.app
  *
  * ─────────────────────────────────────────────────────────────────────────────
  */
@@ -48,16 +49,24 @@ logger.info(
 );
 
 /**
- * Build the JARVIS-themed OTP HTML email.
+ * Build the JARVIS-themed verification link HTML email.
  */
-function buildOtpHtml(otp, purpose, fromName) {
+function buildLinkHtml(link, purpose, fromName) {
   const headlineMap = {
-    signup: 'Complete Your Registration',
+    signup: 'Verify Your Email Address',
     reset:  'Reset Your Password',
   };
   const descMap = {
-    signup: 'Use the code below to verify your email and activate your J.A.R.V.I.S account.',
-    reset:  'Use the code below to reset your J.A.R.V.I.S password. If you didn\'t request this, ignore this email.',
+    signup: 'Click the button below to verify your email and activate your J.A.R.V.I.S account.',
+    reset:  'Click the button below to reset your J.A.R.V.I.S password. If you didn\'t request this, ignore this email.',
+  };
+  const btnLabelMap = {
+    signup: 'VERIFY EMAIL',
+    reset:  'RESET PASSWORD',
+  };
+  const expiryMap = {
+    signup: '24 hours',
+    reset:  '1 hour',
   };
 
   return `<!DOCTYPE html>
@@ -71,11 +80,17 @@ function buildOtpHtml(otp, purpose, fromName) {
       <div style="font-size:11px;color:#3A4558;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:28px;">Secure Access Portal</div>
       <h2 style="font-size:17px;font-weight:600;color:#EEF2FF;margin:0 0 10px;letter-spacing:0.02em;">${headlineMap[purpose]}</h2>
       <p style="font-size:14px;color:#6E7A90;line-height:1.6;margin:0 0 28px;">${descMap[purpose]}</p>
-      <div style="background:#0A0C10;border:1px solid rgba(184,196,216,0.18);border-radius:12px;padding:22px;text-align:center;margin-bottom:28px;">
-        <div style="font-family:monospace;font-size:36px;font-weight:700;letter-spacing:0.22em;color:#EEF2FF;">${otp}</div>
+      <div style="text-align:center;margin-bottom:28px;">
+        <a href="${link}" style="display:inline-block;padding:14px 36px;background:linear-gradient(135deg,#1E2430,#2C3448);border:1px solid rgba(180,200,230,0.25);border-radius:10px;color:#C8D8F0;font-family:monospace;font-size:13px;font-weight:700;letter-spacing:0.12em;text-decoration:none;" target="_blank">
+          ${btnLabelMap[purpose]}
+        </a>
       </div>
-      <p style="font-size:12px;color:#3A4558;text-align:center;margin-bottom:28px;letter-spacing:0.04em;">
-        This code expires in <strong style="color:#6E7A90;">10 minutes</strong>.<br/>Do not share this code with anyone.
+      <p style="font-size:12px;color:#3A4558;text-align:center;margin-bottom:16px;letter-spacing:0.04em;">
+        This link expires in <strong style="color:#6E7A90;">${expiryMap[purpose]}</strong>.<br/>Do not share this link with anyone.
+      </p>
+      <p style="font-size:11px;color:#2E3545;text-align:center;margin-bottom:0;word-break:break-all;">
+        If the button doesn't work, copy this URL:<br/>
+        <a href="${link}" style="color:#4A5568;font-size:11px;">${link}</a>
       </p>
     </div>
     <div style="font-size:11px;color:#2E3545;text-align:center;padding:0 40px 28px;line-height:1.7;">
@@ -114,26 +129,32 @@ function encodeRawEmail(to, subject, html, text, fromAddress, fromName) {
 }
 
 /**
- * Send a JARVIS-themed OTP email via Gmail REST API.
+ * Send a JARVIS-themed verification link email via Gmail REST API.
  * @param {string} to         Recipient email
- * @param {string} otp        6-digit OTP
+ * @param {string} link       Full URL the user should click
  * @param {'signup'|'reset'} purpose
  * @returns {{ sent: boolean, reason?: string }}
  */
-async function sendOtpEmail(to, otp, purpose) {
+async function sendLinkEmail(to, link, purpose) {
   if (!emailConfigured) {
-    logger.info(`[email] DEV MODE — OTP for ${to} (${purpose}): ${otp}`);
+    logger.info(`[email] DEV MODE — Link for ${to} (${purpose}): ${link}`);
     return {
       sent: false,
       reason: 'Gmail API not configured (need GMAIL_USER, GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN)',
+      devLink: link,
     };
   }
 
   const fromName = process.env.EMAIL_FROM_NAME || 'J.A.R.V.I.S';
 
   const subjectMap = {
-    signup: 'Your J.A.R.V.I.S Verification Code',
-    reset:  'J.A.R.V.I.S Password Reset Code',
+    signup: 'Verify your J.A.R.V.I.S email address',
+    reset:  'J.A.R.V.I.S Password Reset Link',
+  };
+
+  const textMap = {
+    signup: `Verify your J.A.R.V.I.S account by visiting this link:\n${link}\n\nExpires in 24 hours.`,
+    reset:  `Reset your J.A.R.V.I.S password by visiting this link:\n${link}\n\nExpires in 1 hour.`,
   };
 
   const oauth2Client = new google.auth.OAuth2(
@@ -148,21 +169,25 @@ async function sendOtpEmail(to, otp, purpose) {
   const raw = encodeRawEmail(
     to,
     subjectMap[purpose],
-    buildOtpHtml(otp, purpose, fromName),
-    `Your J.A.R.V.I.S verification code is: ${otp}\n\nExpires in 10 minutes.`,
+    buildLinkHtml(link, purpose, fromName),
+    textMap[purpose],
     GMAIL_USER,
     fromName
   );
 
-  logger.info(`[email] Sending OTP to ${to} via Gmail API…`);
+  logger.info(`[email] Sending ${purpose} link to ${to} via Gmail API…`);
 
   const result = await gmail.users.messages.send({
     userId: 'me',
     requestBody: { raw },
   });
 
-  logger.info(`[email] OTP sent to ${to} — Gmail messageId: ${result.data.id}`);
+  logger.info(`[email] Link email sent to ${to} — Gmail messageId: ${result.data.id}`);
   return { sent: true };
 }
 
-module.exports = { sendOtpEmail };
+module.exports = { sendLinkEmail };
+
+
+
+

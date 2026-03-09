@@ -9,7 +9,7 @@ const User = require('../models/User');
 const OtpToken = require('../models/OtpToken');
 const Settings = require('../models/Settings');
 const activityService = require('../services/activity.service');
-const { sendOtpEmail } = require('../services/email.service');
+const { sendLinkEmail } = require('../services/email.service');
 const logger = require('../utils/logger');
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -175,41 +175,49 @@ function checkOtpSendLimit(key) {
   return true;
 }
 
-function generateOtp() {
-  return String(crypto.randomInt(100000, 999999));
-}
-
 /* ─────────────────────────────────────────────
-   SIGNUP OTP
+   EMAIL LINK VERIFICATION — SIGNUP
 ───────────────────────────────────────────── */
 
-async function sendSignupOtp(req, res, next) {
+async function sendVerificationEmail(req, res, next) {
   try {
-    const { email } = req.body;
+    const { email, password, name } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
+    if (!password) return res.status(400).json({ error: 'Password is required' });
+    if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
 
     const normalized = email.trim().toLowerCase();
     const existing = await User.findOne({ email: normalized });
     if (existing) return res.status(409).json({ error: 'Email already registered. Please sign in.' });
 
     if (!checkOtpSendLimit(normalized)) {
-      return res.status(429).json({ error: 'Too many OTP requests. Please wait 1 hour and try again.' });
+      return res.status(429).json({ error: 'Too many requests. Please wait 1 hour and try again.' });
     }
 
-    const otp = generateOtp();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
     await OtpToken.deleteMany({ email: normalized, purpose: 'signup' });
-    const otpDoc = new OtpToken({ email: normalized, purpose: 'signup', expiresAt });
-    await otpDoc.setOtp(otp);
-    await otpDoc.save();
+    const tokenDoc = new OtpToken({
+      email: normalized,
+      purpose: 'signup',
+      expiresAt,
+      pendingData: { password, name: (name || '').trim() },
+    });
+    await tokenDoc.setOtp(rawToken);
+    await tokenDoc.save();
+
+    const frontendUrl = process.env.FRONTEND_URL || 'https://jarvis-ai-assistance.vercel.app';
+    const verifyLink = `${frontendUrl}/verify-email?token=${rawToken}&email=${encodeURIComponent(normalized)}`;
 
     let emailSent = false;
     let emailError = null;
+    let devLink = null;
     try {
-      const result = await sendOtpEmail(normalized, otp, 'signup');
+      const result = await sendLinkEmail(normalized, verifyLink, 'signup');
       emailSent = result?.sent === true;
-      if (emailSent) logger.info(`[auth] Signup OTP emailed to ${normalized}`);
+      if (!emailSent && result?.devLink) devLink = result.devLink;
+      if (emailSent) logger.info(`[auth] Verification email sent to ${normalized}`);
     } catch (emailErr) {
       emailError = emailErr.message;
       logger.warn(`[auth] Email delivery failed for ${normalized}: ${emailErr.message}`);
@@ -217,11 +225,11 @@ async function sendSignupOtp(req, res, next) {
 
     const resp = {
       message: emailSent
-        ? 'OTP sent to your email. Valid for 10 minutes.'
-        : 'OTP generated. Email delivery failed — use the code shown below.',
+        ? 'Verification email sent. Check your inbox and click the link to activate your account.'
+        : 'Email delivery failed. Use the dev link below.',
     };
     if (!emailSent) {
-      resp.devOtp = otp;
+      resp.devLink = devLink || verifyLink;
       resp.emailError = emailError || 'Email credentials not configured on server';
     }
     res.json(resp);
@@ -230,45 +238,39 @@ async function sendSignupOtp(req, res, next) {
   }
 }
 
-async function verifySignupOtp(req, res, next) {
+async function verifyEmailToken(req, res, next) {
   try {
-    const { email, otp, password, name } = req.body;
-    if (!email || !otp || !password) {
-      return res.status(400).json({ error: 'Email, OTP, and password are required' });
-    }
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    }
+    const { token, email } = req.body;
+    if (!token || !email) return res.status(400).json({ error: 'Token and email are required' });
 
     const normalized = email.trim().toLowerCase();
-    const otpDoc = await OtpToken.findOne({ email: normalized, purpose: 'signup' });
+    const tokenDoc = await OtpToken.findOne({ email: normalized, purpose: 'signup' });
 
-    if (!otpDoc) return res.status(400).json({ error: 'OTP expired or not found. Please request a new one.' });
-    if (otpDoc.expiresAt < new Date()) {
-      await otpDoc.deleteOne();
-      return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
-    }
-    if (otpDoc.attempts >= 5) {
-      await otpDoc.deleteOne();
-      return res.status(400).json({ error: 'Too many incorrect attempts. Please request a new OTP.' });
+    if (!tokenDoc) return res.status(400).json({ error: 'Verification link expired or already used. Please register again.' });
+    if (tokenDoc.expiresAt < new Date()) {
+      await tokenDoc.deleteOne();
+      return res.status(400).json({ error: 'Verification link has expired. Please register again.' });
     }
 
-    const valid = await otpDoc.verifyOtp(otp);
+    const valid = await tokenDoc.verifyOtp(token);
     if (!valid) {
-      await otpDoc.save();
-      const remaining = 5 - otpDoc.attempts;
-      return res.status(400).json({ error: `Incorrect OTP. ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.` });
+      return res.status(400).json({ error: 'Invalid verification link. Please register again.' });
     }
 
-    await otpDoc.deleteOne();
+    const { password, name } = tokenDoc.pendingData || {};
+    await tokenDoc.deleteOne();
 
-    const existing = await User.findOne({ email: normalized });
-    if (existing) return res.status(409).json({ error: 'Email already registered.' });
+    if (!password) return res.status(400).json({ error: 'Signup data missing. Please register again.' });
 
-    const user = await User.create({ email: normalized, password, name: (name || '').trim() });
+    const existingUser = await User.findOne({ email: normalized });
+    if (existingUser) {
+      return sendUserAndToken(res, existingUser);
+    }
+
+    const user = await User.create({ email: normalized, password, name: name || '' });
     await Settings.create({ userId: user._id });
     activityService.log(user._id, 'register', {}).catch(() => {});
-    logger.info(`[auth] New user created via OTP: ${normalized}`);
+    logger.info(`[auth] New user verified and created: ${normalized}`);
 
     sendUserAndToken(res, user, 201);
   } catch (err) {
@@ -277,7 +279,7 @@ async function verifySignupOtp(req, res, next) {
 }
 
 /* ─────────────────────────────────────────────
-   FORGOT PASSWORD OTP
+   FORGOT PASSWORD (EMAIL LINK)
 ───────────────────────────────────────────── */
 
 async function forgotPassword(req, res, next) {
@@ -290,35 +292,44 @@ async function forgotPassword(req, res, next) {
     // Always return success to prevent email enumeration attacks
     const user = await User.findOne({ email: normalized });
     if (!user) {
-      return res.json({ message: 'If this email is registered, an OTP has been sent.' });
+      return res.json({ message: 'If this email is registered, a reset link has been sent.' });
     }
 
     if (!checkOtpSendLimit(`reset:${normalized}`)) {
-      return res.status(429).json({ error: 'Too many OTP requests. Please wait 1 hour and try again.' });
+      return res.status(429).json({ error: 'Too many requests. Please wait 1 hour and try again.' });
     }
 
-    const otp = generateOtp();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     await OtpToken.deleteMany({ email: normalized, purpose: 'reset' });
-    const otpDoc = new OtpToken({ email: normalized, purpose: 'reset', expiresAt });
-    await otpDoc.setOtp(otp);
-    await otpDoc.save();
+    const tokenDoc = new OtpToken({ email: normalized, purpose: 'reset', expiresAt });
+    await tokenDoc.setOtp(rawToken);
+    await tokenDoc.save();
+
+    const frontendUrl = process.env.FRONTEND_URL || 'https://jarvis-ai-assistance.vercel.app';
+    const resetLink = `${frontendUrl}/reset-password?token=${rawToken}&email=${encodeURIComponent(normalized)}`;
 
     let emailSent = false;
     let emailError = null;
+    let devLink = null;
     try {
-      const result = await sendOtpEmail(normalized, otp, 'reset');
+      const result = await sendLinkEmail(normalized, resetLink, 'reset');
       emailSent = result?.sent === true;
-      if (emailSent) logger.info(`[auth] Reset OTP emailed to ${normalized}`);
+      if (!emailSent && result?.devLink) devLink = result.devLink;
+      if (emailSent) logger.info(`[auth] Reset link emailed to ${normalized}`);
     } catch (emailErr) {
       emailError = emailErr.message;
       logger.warn(`[auth] Reset email delivery failed for ${normalized}: ${emailErr.message}`);
     }
 
-    const resetResp = { message: emailSent ? 'If this email is registered, an OTP has been sent.' : 'OTP generated. Email delivery failed.' };
+    const resetResp = {
+      message: emailSent
+        ? 'If this email is registered, a password reset link has been sent.'
+        : 'Email delivery failed. Use the dev link below.',
+    };
     if (!emailSent) {
-      resetResp.devOtp = otp;
+      resetResp.devLink = devLink || resetLink;
       resetResp.emailError = emailError || 'Email credentials not configured on server';
     }
     res.json(resetResp);
@@ -327,78 +338,43 @@ async function forgotPassword(req, res, next) {
   }
 }
 
-async function verifyResetOtp(req, res, next) {
-  try {
-    const { email, otp } = req.body;
-    if (!email || !otp) return res.status(400).json({ error: 'Email and OTP are required' });
-
-    const normalized = email.trim().toLowerCase();
-    const otpDoc = await OtpToken.findOne({ email: normalized, purpose: 'reset' });
-
-    if (!otpDoc) return res.status(400).json({ error: 'OTP expired or not found. Please request a new one.' });
-    if (otpDoc.expiresAt < new Date()) {
-      await otpDoc.deleteOne();
-      return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
-    }
-    if (otpDoc.attempts >= 5) {
-      await otpDoc.deleteOne();
-      return res.status(400).json({ error: 'Too many incorrect attempts. Request a new OTP.' });
-    }
-
-    const valid = await otpDoc.verifyOtp(otp);
-    if (!valid) {
-      await otpDoc.save();
-      const remaining = 5 - otpDoc.attempts;
-      return res.status(400).json({ error: `Incorrect OTP. ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.` });
-    }
-
-    await otpDoc.deleteOne();
-
-    // Issue a short-lived reset token (15 min)
-    const resetToken = jwt.sign(
-      { purpose: 'password_reset', email: normalized },
-      JWT_SECRET || 'fallback-dev-secret',
-      { expiresIn: '15m' }
-    );
-
-    res.json({ resetToken, message: 'OTP verified. Set your new password.' });
-  } catch (err) {
-    next(err);
-  }
-}
-
 async function resetPassword(req, res, next) {
   try {
-    const { resetToken, password } = req.body;
-    if (!resetToken || !password) {
-      return res.status(400).json({ error: 'Reset token and new password are required' });
+    const { token, email, password } = req.body;
+    if (!token || !email || !password) {
+      return res.status(400).json({ error: 'Token, email, and new password are required' });
     }
     if (password.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
-    let payload;
-    try {
-      payload = jwt.verify(resetToken, JWT_SECRET || 'fallback-dev-secret');
-    } catch {
+    const normalized = email.trim().toLowerCase();
+    const tokenDoc = await OtpToken.findOne({ email: normalized, purpose: 'reset' });
+
+    if (!tokenDoc) return res.status(400).json({ error: 'Reset link expired or already used. Please request a new one.' });
+    if (tokenDoc.expiresAt < new Date()) {
+      await tokenDoc.deleteOne();
       return res.status(400).json({ error: 'Reset link has expired. Please request a new one.' });
     }
 
-    if (payload.purpose !== 'password_reset') {
-      return res.status(400).json({ error: 'Invalid reset token.' });
+    const valid = await tokenDoc.verifyOtp(token);
+    if (!valid) {
+      return res.status(400).json({ error: 'Invalid reset link. Please request a new one.' });
     }
 
-    const user = await User.findOne({ email: payload.email }).select('+password');
+    await tokenDoc.deleteOne();
+
+    const user = await User.findOne({ email: normalized }).select('+password');
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
     user.password = password; // pre-save hook hashes it
     await user.save();
-    logger.info(`[auth] Password reset for ${payload.email}`);
+    logger.info(`[auth] Password reset for ${normalized}`);
 
-    res.json({ message: 'Password reset successfully. Please sign in.' });
+    res.json({ message: 'Password reset successfully. You can now sign in.' });
   } catch (err) {
     next(err);
   }
 }
 
-module.exports = { register, login, getMe, refresh, googleAuth, sendSignupOtp, verifySignupOtp, forgotPassword, verifyResetOtp, resetPassword };
+module.exports = { register, login, getMe, refresh, googleAuth, sendVerificationEmail, verifyEmailToken, forgotPassword, resetPassword };

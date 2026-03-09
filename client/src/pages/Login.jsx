@@ -1,8 +1,8 @@
 /**
  * Login page — J.A.R.V.I.S Access Portal redesign.
- * Includes forgot-password OTP flow (inline, 3 steps).
+ * Includes forgot-password link flow (inline, 2 steps).
  */
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import GoogleSignInButton from '../components/GoogleSignInButton';
@@ -20,24 +20,12 @@ export default function Login() {
   const [showPass,   setShowPass]   = useState(false);
 
   /* ── Forgot-password state ── */
-  const [fpStep,       setFpStep]       = useState(0); // 0=hidden 1=email 2=otp 3=newpass 4=done
+  const [fpStep,       setFpStep]       = useState(0); // 0=hidden 1=email 2=check-email
   const [fpEmail,      setFpEmail]      = useState('');
-  const [fpOtp,        setFpOtp]        = useState('');
-  const [fpPass,       setFpPass]       = useState('');
-  const [fpResendSecs, setFpResendSecs] = useState(0);
-  const [fpResetToken, setFpResetToken] = useState('');
+  const [fpDevLink,    setFpDevLink]    = useState('');
+  const [fpEmailErr,   setFpEmailErr]   = useState('');
   const [fpSubmitting, setFpSubmitting] = useState(false);
   const [fpError,      setFpError]      = useState('');
-  const [fpShowPass,   setFpShowPass]   = useState(false);
-  const [fpDevOtp,     setFpDevOtp]     = useState(''); // shown on screen in dev mode
-  const fpOtpRef = useRef(null);
-
-  /* Countdown for FP resend */
-  useEffect(() => {
-    if (fpResendSecs <= 0) return;
-    const id = setTimeout(() => setFpResendSecs(s => s - 1), 1000);
-    return () => clearTimeout(id);
-  }, [fpResendSecs]);
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   const googleEnabled = googleClientId && googleClientId !== 'YOUR_GOOGLE_CLIENT_ID_HERE';
@@ -77,67 +65,21 @@ export default function Login() {
     } finally { setSubmitting(false); }
   };
 
-  /* ── FP Step 1: send OTP ── */
-  const handleFpSendOtp = async (e) => {
+  /* ── FP Step 1: send reset link ── */
+  const handleFpSendLink = async (e) => {
     e.preventDefault();
     setFpError('');
     if (!fpEmail.trim()) { setFpError('Please enter your email address.'); return; }
     setFpSubmitting(true);
     try {
       const res = await authApi.forgotPassword(fpEmail.trim());
-      if (res.devOtp) setFpDevOtp(res.devOtp);
+      if (res.devLink) setFpDevLink(res.devLink);
+      if (res.emailError) setFpEmailErr(res.emailError);
       setFpStep(2);
-      setFpResendSecs(30);
-      setTimeout(() => fpOtpRef.current?.focus(), 100);
     } catch (err) {
-      setFpError(err.response?.data?.error || 'Failed to send OTP.');
+      setFpError(err.response?.data?.error || 'Failed to send reset link.');
     } finally { setFpSubmitting(false); }
   };
-
-  /* ── FP Step 2: verify OTP ── */
-  const handleFpVerifyOtp = async (e) => {
-    e.preventDefault();
-    setFpError('');
-    if (!fpOtp || fpOtp.length !== 6) { setFpError('Enter the 6-digit code.'); return; }
-    setFpSubmitting(true);
-    try {
-      const { resetToken } = await authApi.verifyResetOtp(fpEmail.trim(), fpOtp);
-      setFpResetToken(resetToken);
-      setFpStep(3);
-    } catch (err) {
-      setFpError(err.response?.data?.error || 'Invalid or expired code.');
-    } finally { setFpSubmitting(false); }
-  };
-
-  /* ── FP Step 3: set new password ── */
-  const handleFpReset = async (e) => {
-    e.preventDefault();
-    setFpError('');
-    if (!fpPass || fpPass.length < 6) { setFpError('Password must be at least 6 characters.'); return; }
-    setFpSubmitting(true);
-    try {
-      await authApi.resetPassword(fpResetToken, fpPass);
-      setFpStep(4);
-    } catch (err) {
-      setFpError(err.response?.data?.error || 'Failed to reset password.');
-    } finally { setFpSubmitting(false); }
-  };
-
-  const handleFpResend = async () => {
-    if (fpResendSecs > 0 || fpSubmitting) return;
-    setFpError(''); setFpOtp(''); setFpDevOtp('');
-    setFpSubmitting(true);
-    try {
-      const res = await authApi.forgotPassword(fpEmail.trim());
-      if (res.devOtp) setFpDevOtp(res.devOtp);
-      setFpResendSecs(30);
-      setTimeout(() => fpOtpRef.current?.focus(), 100);
-    } catch (err) {
-      setFpError(err.response?.data?.error || 'Failed to resend OTP.');
-    } finally { setFpSubmitting(false); }
-  };
-
-  const closeFp = () => { setFpStep(0); setFpEmail(''); setFpOtp(''); setFpPass(''); setFpError(''); setFpResetToken(''); setFpDevOtp(''); };
 
   const inp = (field) => ({
     width: '100%',
@@ -407,13 +349,11 @@ export default function Login() {
               {/* FP header */}
               <div style={{marginBottom:'1.5rem'}}>
                 <div style={{fontFamily:"'Orbitron', monospace",fontSize:'0.82rem',fontWeight:600,color:'#EEF2FF',letterSpacing:'0.08em',marginBottom:'0.28rem'}}>
-                  {fpStep===4 ? 'Password updated' : 'Reset password'}
+                  Reset password
                 </div>
                 <div style={{fontSize:'0.85rem',color:'#6E7A90',lineHeight:1.55}}>
-                  {fpStep===1 && 'Enter your email and we\'ll send a reset code.'}
-                  {fpStep===2 && <>Code sent to <span style={{color:'#B8C4D8',fontFamily:"'DM Mono', monospace",fontSize:'0.8rem'}}>{fpEmail}</span>. Enter it below.</>}
-                  {fpStep===3 && 'OTP verified. Set your new password.'}
-                  {fpStep===4 && 'Your password has been reset. You can now sign in.'}
+                  {fpStep===1 && 'Enter your email and we\'ll send a password reset link.'}
+                  {fpStep===2 && <>Link sent to <span style={{color:'#B8C4D8',fontFamily:"'DM Mono', monospace",fontSize:'0.8rem'}}>{fpEmail}</span>. Check your inbox.</>}
                 </div>
               </div>
 
@@ -426,7 +366,7 @@ export default function Login() {
 
               {/* Step 1: email */}
               {fpStep===1 && (
-                <form onSubmit={handleFpSendOtp}>
+                <form onSubmit={handleFpSendLink}>
                   <div style={{marginBottom:'1.2rem'}}>
                     <label style={{display:'block',fontFamily:"'DM Mono', monospace",fontSize:'0.59rem',color:'#2E3545',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:'0.45rem'}}>Email Address</label>
                     <div style={{position:'relative'}}>
@@ -436,80 +376,55 @@ export default function Login() {
                     </div>
                   </div>
                   <button type="submit" disabled={fpSubmitting} style={{width:'100%',padding:'0.84rem',background:fpSubmitting?'rgba(160,185,220,0.10)':'linear-gradient(135deg,#1E2430,#2C3448)',border:'1px solid rgba(180,200,230,0.20)',borderRadius:12,cursor:fpSubmitting?'not-allowed':'pointer',fontFamily:"'Orbitron', monospace",fontSize:'0.62rem',fontWeight:600,color:'#C8D8F0',letterSpacing:'0.12em',transition:'all 0.22s ease',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-                    {fpSubmitting?<><span style={{width:12,height:12,border:'1.5px solid rgba(200,220,255,0.20)',borderTopColor:'#B8C4D8',borderRadius:'50%',display:'inline-block',animation:'spin 0.8s linear infinite'}}/>SENDING…</>:'SEND RESET CODE'}
+                    {fpSubmitting?<><span style={{width:12,height:12,border:'1.5px solid rgba(200,220,255,0.20)',borderTopColor:'#B8C4D8',borderRadius:'50%',display:'inline-block',animation:'spin 0.8s linear infinite'}}/>SENDING…</>
+:'SEND RESET LINK'}
                   </button>
                 </form>
               )}
 
-              {/* Step 2: OTP */}
+              {/* Step 2: check email */}
               {fpStep===2 && (
-                <form onSubmit={handleFpVerifyOtp}>
-                  {fpDevOtp && (
-                    <div style={{background:'rgba(234,179,8,0.08)',border:'1px solid rgba(234,179,8,0.30)',borderRadius:10,padding:'10px 14px',marginBottom:12,display:'flex',flexDirection:'column',gap:4}}>
-                      <span style={{fontFamily:"'DM Mono', monospace",fontSize:'0.56rem',color:'#CA8A04',letterSpacing:'0.12em',textTransform:'uppercase'}}>&#9888; Dev Mode — Email not configured</span>
-                      <span style={{fontFamily:"'DM Mono', monospace",fontSize:'1.6rem',fontWeight:700,color:'#FDE047',letterSpacing:'0.40em',textAlign:'center'}}>{fpDevOtp}</span>
+                <div>
+                  {fpDevLink && (
+                    <div style={{background:'rgba(234,179,8,0.08)',border:'1px solid rgba(234,179,8,0.30)',borderRadius:10,padding:'12px 14px',marginBottom:14,display:'flex',flexDirection:'column',gap:8}}>
+                      <span style={{fontFamily:"'DM Mono', monospace",fontSize:'0.56rem',color:'#CA8A04',letterSpacing:'0.12em',textTransform:'uppercase'}}>&#9888; Email delivery failed &#8212; dev mode link</span>
+                      <a href={fpDevLink} target="_blank" rel="noreferrer"
+                        style={{fontFamily:"'DM Mono', monospace",fontSize:'0.62rem',color:'#FDE047',wordBreak:'break-all',lineHeight:1.5,textDecoration:'underline'}}>
+                        {fpDevLink}
+                      </a>
+                      {fpEmailErr && <span style={{fontSize:'0.65rem',color:'#DC2626',lineHeight:1.4,wordBreak:'break-all'}}>Reason: {fpEmailErr}</span>}
                     </div>
                   )}
-                  <div style={{marginBottom:'0.6rem'}}>
-                    <label style={{display:'block',fontFamily:"'DM Mono', monospace",fontSize:'0.59rem',color:'#2E3545',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:'0.45rem'}}>Verification Code</label>
-                    <input ref={fpOtpRef} type="text" inputMode="numeric" maxLength={6} placeholder="_ _ _ _ _ _"
-                      value={fpOtp} onChange={e=>setFpOtp(e.target.value.replace(/\D/g,'').slice(0,6))}
-                      disabled={fpSubmitting} autoComplete="one-time-code"
-                      style={{width:'100%',padding:'1rem',textAlign:'center',background:'rgba(8,10,18,0.82)',border:`1px solid ${fpOtp.length===6?'rgba(200,218,245,0.26)':'rgba(180,196,220,0.09)'}`,borderRadius:12,color:'#EEF2FF',fontFamily:"'DM Mono', monospace",fontSize:'1.6rem',fontWeight:700,letterSpacing:'0.45em',outline:'none',transition:'all 0.20s ease'}} />
-                  </div>
-                  <div style={{display:'flex',justifyContent:'flex-end',marginBottom:'1rem'}}>
-                    <button type="button" onClick={handleFpResend} disabled={fpResendSecs>0||fpSubmitting}
-                      style={{fontFamily:"'DM Mono', monospace",fontSize:'0.59rem',color:fpResendSecs>0?'#2E3545':'#6E7A90',background:'none',border:'none',cursor:fpResendSecs>0?'default':'pointer',padding:0,transition:'color 0.18s'}}>
-                      {fpResendSecs>0?`Resend in ${fpResendSecs}s`:'Resend code'}
-                    </button>
-                  </div>
-                  <button type="submit" disabled={fpSubmitting||fpOtp.length!==6} style={{width:'100%',padding:'0.84rem',background:(fpSubmitting||fpOtp.length!==6)?'rgba(160,185,220,0.10)':'linear-gradient(135deg,#1E2430,#2C3448)',border:'1px solid rgba(180,200,230,0.20)',borderRadius:12,cursor:(fpSubmitting||fpOtp.length!==6)?'not-allowed':'pointer',fontFamily:"'Orbitron', monospace",fontSize:'0.62rem',fontWeight:600,color:(fpSubmitting||fpOtp.length!==6)?'#3A4558':'#C8D8F0',letterSpacing:'0.12em',transition:'all 0.22s ease',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-                    {fpSubmitting?<><span style={{width:12,height:12,border:'1.5px solid rgba(200,220,255,0.20)',borderTopColor:'#B8C4D8',borderRadius:'50%',display:'inline-block',animation:'spin 0.8s linear infinite'}}/>VERIFYING…</>:'VERIFY CODE'}
-                  </button>
-                </form>
-              )}
-
-              {/* Step 3: new password */}
-              {fpStep===3 && (
-                <form onSubmit={handleFpReset}>
-                  <div style={{marginBottom:'1.2rem'}}>
-                    <label style={{display:'block',fontFamily:"'DM Mono', monospace",fontSize:'0.59rem',color:'#2E3545',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:'0.45rem'}}>New Password</label>
-                    <div style={{position:'relative'}}>
-                      <svg style={{position:'absolute',left:'1rem',top:'50%',transform:'translateY(-50%)',width:14,height:14,color:'#2E3545',pointerEvents:'none'}} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                      <input type={fpShowPass?'text':'password'} placeholder="Min. 6 characters" value={fpPass} onChange={e=>setFpPass(e.target.value)}
-                        disabled={fpSubmitting} autoComplete="new-password" style={{...inp('fpPass'),paddingRight:'2.85rem'}} />
-                      <button type="button" onClick={()=>setFpShowPass(v=>!v)} tabIndex={-1}
-                        style={{position:'absolute',right:'1rem',top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'#2E3545',padding:0,display:'flex',alignItems:'center'}}>
-                        {fpShowPass
-                          ?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                          :<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
-                      </button>
+                  <div style={{background:'rgba(180,196,220,0.06)',border:'1px solid rgba(180,196,220,0.12)',borderRadius:12,padding:'1.2rem 1.4rem',marginBottom:'0.8rem',display:'flex',flexDirection:'column',gap:'0.6rem'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:'0.6rem'}}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6E7A90" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+                      </svg>
+                      <span style={{fontFamily:"'DM Mono', monospace",fontSize:'0.62rem',color:'#6E7A90',letterSpacing:'0.04em',lineHeight:1.5}}>
+                        Check your inbox (and spam folder). Click the <strong style={{color:'#B8C4D8'}}>Reset Password</strong> button in the email.
+                      </span>
+                    </div>
+                    <div style={{display:'flex',alignItems:'center',gap:'0.6rem'}}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6E7A90" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                      </svg>
+                      <span style={{fontFamily:"'DM Mono', monospace",fontSize:'0.62rem',color:'#6E7A90',letterSpacing:'0.04em'}}>
+                        Link expires in <strong style={{color:'#B8C4D8'}}>1 hour</strong>.
+                      </span>
                     </div>
                   </div>
-                  <button type="submit" disabled={fpSubmitting} style={{width:'100%',padding:'0.84rem',background:fpSubmitting?'rgba(160,185,220,0.10)':'linear-gradient(135deg,#1E2430,#2C3448)',border:'1px solid rgba(180,200,230,0.20)',borderRadius:12,cursor:fpSubmitting?'not-allowed':'pointer',fontFamily:"'Orbitron', monospace",fontSize:'0.62rem',fontWeight:600,color:'#C8D8F0',letterSpacing:'0.12em',transition:'all 0.22s ease',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-                    {fpSubmitting?<><span style={{width:12,height:12,border:'1.5px solid rgba(200,220,255,0.20)',borderTopColor:'#B8C4D8',borderRadius:'50%',display:'inline-block',animation:'spin 0.8s linear infinite'}}/>UPDATING…</>:'UPDATE PASSWORD'}
-                  </button>
-                </form>
-              )}
-
-              {/* Step 4: success */}
-              {fpStep===4 && (
-                <button onClick={closeFp} style={{width:'100%',padding:'0.84rem',background:'linear-gradient(135deg,#1E2430,#2C3448)',border:'1px solid rgba(180,200,230,0.20)',borderRadius:12,cursor:'pointer',fontFamily:"'Orbitron', monospace",fontSize:'0.62rem',fontWeight:600,color:'#C8D8F0',letterSpacing:'0.12em',transition:'all 0.22s ease'}}>
-                  SIGN IN NOW
-                </button>
+                </div>
               )}
 
               {/* Back / cancel */}
-              {fpStep < 4 && (
-                <div style={{textAlign:'center',marginTop:16}}>
-                  <button type="button" onClick={closeFp}
-                    style={{fontFamily:"'DM Mono', monospace",fontSize:'0.59rem',color:'#2E3545',background:'none',border:'none',cursor:'pointer',padding:0,transition:'color 0.18s'}}
-                    onMouseEnter={e=>e.currentTarget.style.color='#6E7A90'}
-                    onMouseLeave={e=>e.currentTarget.style.color='#2E3545'}>
-                    ← Back to sign in
-                  </button>
-                </div>
-              )}
+              <div style={{textAlign:'center',marginTop:16}}>
+                <button type="button" onClick={closeFp}
+                  style={{fontFamily:"'DM Mono', monospace",fontSize:'0.59rem',color:'#2E3545',background:'none',border:'none',cursor:'pointer',padding:0,transition:'color 0.18s'}}
+                  onMouseEnter={e=>e.currentTarget.style.color='#6E7A90'}
+                  onMouseLeave={e=>e.currentTarget.style.color='#2E3545'}>
+                  &#8592; Back to sign in
+                </button>
+              </div>
             </div>
           )}
 

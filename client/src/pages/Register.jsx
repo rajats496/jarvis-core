@@ -1,20 +1,20 @@
 ﻿/**
- * Register page â€” J.A.R.V.I.S Access Portal redesign.
- * Step 1: Enter name / email / password â†’ send OTP
- * Step 2: Enter 6-digit OTP â†’ verify â†’ auto-login
+ * Register page — J.A.R.V.I.S Access Portal.
+ * Step 1: Enter name / email / password → send verification email
+ * Step 2: “Check your email” screen
  */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import GoogleSignInButton from '../components/GoogleSignInButton';
 import * as authApi from '../api/auth.api';
 
 export default function Register() {
-  const { loginWithGoogle, loginWithToken, isAuthenticated } = useAuth();
+  const { loginWithGoogle, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   /* â”€â”€ Step 1 state â”€â”€ */
-  const [step,       setStep]       = useState(1); // 1 = form, 2 = OTP
+  const [step,       setStep]       = useState(1); // 1 = form, 2 = check email
   const [name,       setName]       = useState('');
   const [email,      setEmail]      = useState('');
   const [password,   setPassword]   = useState('');
@@ -23,24 +23,15 @@ export default function Register() {
   const [error,      setError]      = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  /* ── Step 2 (OTP) state ── */
-  const [otp,        setOtp]        = useState('');
-  const [resendSecs, setResendSecs] = useState(0);
-  const [devOtp,     setDevOtp]     = useState('');
-  const [emailErr,   setEmailErr]   = useState('');   // why email failed
+  /* ── Step 2 (check email) state ── */
+  const [devLink,    setDevLink]    = useState('');
+  const [emailErr,   setEmailErr]   = useState('');
   const [slowReq,    setSlowReq]    = useState(false);
-  const otpRef  = useRef(null);
   const slowRef = useRef(null);
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   const googleEnabled  = googleClientId && googleClientId !== 'YOUR_GOOGLE_CLIENT_ID_HERE';
 
-  /* â"€â"€ Resend countdown (must be before any early return) â"€â"€ */
-  useEffect(() => {
-    if (resendSecs <= 0) return;
-    const id = setTimeout(() => setResendSecs(s => s - 1), 1000);
-    return () => clearTimeout(id);
-  }, [resendSecs]);
 
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
 
@@ -61,7 +52,7 @@ export default function Register() {
 
 
   /* â”€â”€ STEP 1: Send OTP â”€â”€ */
-  const handleSendOtp = async (e) => {
+  const handleSendVerification = async (e) => {
     e.preventDefault();
     setError('');
     if (!email.trim())        { setError('Email is required.'); return; }
@@ -71,12 +62,10 @@ export default function Register() {
     setSlowReq(false);
     slowRef.current = setTimeout(() => setSlowReq(true), 6000);
     try {
-      const res = await authApi.sendSignupOtp(email.trim());
-      if (res.devOtp) setDevOtp(res.devOtp);
+      const res = await authApi.sendVerificationEmail(email.trim(), password, name.trim());
+      if (res.devLink) setDevLink(res.devLink);
       if (res.emailError) setEmailErr(res.emailError);
       setStep(2);
-      setResendSecs(30);
-      setTimeout(() => otpRef.current?.focus(), 100);
     } catch (err) {
       const isTimeout = err.code === 'ECONNABORTED';
       const isDown    = err.code === 'ERR_NETWORK';
@@ -84,7 +73,7 @@ export default function Register() {
         || (isTimeout ? 'Server is taking too long to respond. It may be starting up — please try again in 30 seconds.' : null)
         || (isDown    ? 'Cannot reach server. Check your internet connection.' : null)
         || err.message
-        || 'Failed to send OTP.';
+        || 'Failed to send verification email.';
       setError(msg);
     } finally {
       clearTimeout(slowRef.current);
@@ -94,35 +83,10 @@ export default function Register() {
   };
 
   /* â”€â”€ STEP 2: Verify OTP â”€â”€ */
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    setError('');
-    if (!otp || otp.length !== 6) { setError('Enter the 6-digit code sent to your email.'); return; }
-    setSubmitting(true);
-    try {
-      const { token, user } = await authApi.verifySignupOtp(email.trim(), otp, password, name.trim());
-      loginWithToken(token, user);
-      navigate('/dashboard', { replace: true });
-    } catch (err) {
-      setError(err.response?.data?.error || 'Verification failed. Try again.');
-    } finally { setSubmitting(false); }
-  };
+
 
   /* â”€â”€ Resend OTP â”€â”€ */
-  const handleResend = async () => {
-    if (resendSecs > 0 || submitting) return;
-    setError(''); setOtp(''); setDevOtp(''); setEmailErr('');
-    setSubmitting(true);
-    try {
-      const res = await authApi.sendSignupOtp(email.trim());
-      if (res.devOtp) setDevOtp(res.devOtp);
-      if (res.emailError) setEmailErr(res.emailError);
-      setResendSecs(30);
-      setTimeout(() => otpRef.current?.focus(), 100);
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to resend OTP.');
-    } finally { setSubmitting(false); }
-  };
+
 
   /* â”€â”€ Google â”€â”€ */
   const handleGoogleSuccess = async (tokenResponse) => {
@@ -245,12 +209,12 @@ export default function Register() {
           Create your core
         </div>
         <div style={{fontSize:'0.85rem',color:'#6E7A90',marginBottom:'1.5rem',lineHeight:1.55}}>
-          Enter your details â€” we'll verify your email with a code.
+          Enter your details — we'll send a verification link to your email.
         </div>
 
         <ErrorBox />
 
-        <form onSubmit={handleSendOtp}>
+        <form onSubmit={handleSendVerification}>
           {/* Name */}
           <div style={{marginBottom:'1.2rem'}}>
             <label style={{display:'block',fontFamily:"'DM Mono', monospace",fontSize:'0.59rem',color:'#2E3545',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:'0.45rem'}}>
@@ -336,72 +300,49 @@ export default function Register() {
   return cardShell(
     <>
       <div style={{fontFamily:"'Orbitron', monospace",fontSize:'0.82rem',fontWeight:600,color:'#EEF2FF',letterSpacing:'0.08em',marginBottom:'0.28rem'}}>
-        Verify your email
+        Check your email
       </div>
       <div style={{fontSize:'0.85rem',color:'#6E7A90',marginBottom:'1.2rem',lineHeight:1.55}}>
-        A 6-digit code was sent to{' '}
+        A verification link was sent to{' '}
         <span style={{color:'#B8C4D8',fontFamily:"'DM Mono', monospace",fontSize:'0.8rem'}}>{email}</span>.
-        {' '}Enter it below to activate your account.
+        {' '}Click the link to activate your account. It expires in 24 hours.
       </div>
 
-      {/* Dev mode — show OTP on screen when email service not configured */}
-      {devOtp && (
-        <div style={{background:'rgba(234,179,8,0.08)',border:'1px solid rgba(234,179,8,0.30)',borderRadius:10,padding:'12px 14px',marginBottom:14,display:'flex',flexDirection:'column',gap:5}}>
-          <span style={{fontFamily:"'DM Mono', monospace",fontSize:'0.56rem',color:'#CA8A04',letterSpacing:'0.12em',textTransform:'uppercase'}}>&#9888; Email delivery failed — use this code</span>
-          <span style={{fontFamily:"'DM Mono', monospace",fontSize:'1.8rem',fontWeight:700,color:'#FDE047',letterSpacing:'0.40em',textAlign:'center'}}>{devOtp}</span>
+      {/* Dev mode — show clickable link when email service not configured */}
+      {devLink && (
+        <div style={{background:'rgba(234,179,8,0.08)',border:'1px solid rgba(234,179,8,0.30)',borderRadius:10,padding:'12px 14px',marginBottom:14,display:'flex',flexDirection:'column',gap:8}}>
+          <span style={{fontFamily:"'DM Mono', monospace",fontSize:'0.56rem',color:'#CA8A04',letterSpacing:'0.12em',textTransform:'uppercase'}}>&#9888; Email delivery failed &#8212; dev mode link</span>
+          <a href={devLink} target="_blank" rel="noreferrer"
+            style={{fontFamily:"'DM Mono', monospace",fontSize:'0.62rem',color:'#FDE047',wordBreak:'break-all',lineHeight:1.5,textDecoration:'underline'}}>
+            {devLink}
+          </a>
           {emailErr && <span style={{fontSize:'0.65rem',color:'#DC2626',lineHeight:1.4,wordBreak:'break-all'}}>Reason: {emailErr}</span>}
-          <span style={{fontSize:'0.70rem',color:'#A16207',lineHeight:1.4}}>Check EMAIL_USER &amp; EMAIL_APP_PASSWORD on server.</span>
         </div>
       )}
 
-      <ErrorBox />
-
-      <form onSubmit={handleVerifyOtp}>
-        <div style={{marginBottom:'0.6rem'}}>
-          <label style={{display:'block',fontFamily:"'DM Mono', monospace",fontSize:'0.59rem',color:'#2E3545',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:'0.45rem'}}>Verification Code</label>
-          <input
-            ref={otpRef}
-            type="text"
-            inputMode="numeric"
-            maxLength={6}
-            placeholder="_ _ _ _ _ _"
-            value={otp}
-            onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            disabled={submitting}
-            autoComplete="one-time-code"
-            style={{
-              width:'100%', padding:'1rem', textAlign:'center',
-              background:'rgba(8,10,18,0.82)',
-              border:`1px solid ${otp.length===6?'rgba(200,218,245,0.26)':'rgba(180,196,220,0.09)'}`,
-              borderRadius:12, color:'#EEF2FF',
-              fontFamily:"'DM Mono', monospace", fontSize:'1.6rem', fontWeight:700,
-              letterSpacing:'0.45em', outline:'none',
-              transition:'all 0.20s ease',
-              boxShadow: otp.length===6?'0 0 0 3px rgba(160,190,230,0.06)':'none',
-            }}
-          />
+      <div style={{background:'rgba(180,196,220,0.06)',border:'1px solid rgba(180,196,220,0.12)',borderRadius:12,padding:'1.2rem 1.4rem',marginBottom:'1.5rem',display:'flex',flexDirection:'column',gap:'0.6rem'}}>
+        <div style={{display:'flex',alignItems:'center',gap:'0.6rem'}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6E7A90" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+          </svg>
+          <span style={{fontFamily:"'DM Mono', monospace",fontSize:'0.62rem',color:'#6E7A90',letterSpacing:'0.04em',lineHeight:1.5}}>
+            Check your inbox (and spam folder). Click the <strong style={{color:'#B8C4D8'}}>Verify Email</strong> button in the email.
+          </span>
         </div>
-
-        {/* Resend row */}
-        <div style={{display:'flex',justifyContent:'flex-end',marginBottom:'1.3rem'}}>
-          <button type="button" onClick={handleResend} disabled={resendSecs>0||submitting}
-            style={{fontFamily:"'DM Mono', monospace",fontSize:'0.59rem',color:resendSecs>0?'#2E3545':'#6E7A90',letterSpacing:'0.06em',background:'none',border:'none',cursor:resendSecs>0||submitting?'default':'pointer',padding:0,transition:'color 0.18s'}}
-            onMouseEnter={e=>{if(resendSecs===0)e.currentTarget.style.color='#B8C4D8'}}
-            onMouseLeave={e=>{if(resendSecs===0)e.currentTarget.style.color='#6E7A90'}}>
-            {resendSecs>0?`Resend in ${resendSecs}s`:'Resend code'}
-          </button>
+        <div style={{display:'flex',alignItems:'center',gap:'0.6rem'}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6E7A90" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span style={{fontFamily:"'DM Mono', monospace",fontSize:'0.62rem',color:'#6E7A90',letterSpacing:'0.04em'}}>
+            Link expires in <strong style={{color:'#B8C4D8'}}>24 hours</strong>.
+          </span>
         </div>
+      </div>
 
-        <button type="submit" disabled={submitting||otp.length!==6} style={submitBtnStyle(submitting||otp.length!==6)}
-          onMouseEnter={e=>{if(!submitting&&otp.length===6){e.currentTarget.style.background='linear-gradient(135deg,#262E3E,#384050)';e.currentTarget.style.borderColor='rgba(210,225,250,0.32)';e.currentTarget.style.color='#F0F4FF'}}}
-          onMouseLeave={e=>{if(!submitting&&otp.length===6){e.currentTarget.style.background='linear-gradient(135deg,#1E2430,#2C3448)';e.currentTarget.style.borderColor='rgba(180,200,230,0.20)';e.currentTarget.style.color='#C8D8F0'}}}>
-          <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(200,220,255,0.26),transparent)'}}/>
-          {submitting?<><span style={{width:12,height:12,border:'1.5px solid rgba(200,220,255,0.20)',borderTopColor:'#B8C4D8',borderRadius:'50%',display:'inline-block',animation:'spin 0.8s linear infinite'}}/>VERIFYINGâ€¦</>:'VERIFY & CREATE ACCOUNT'}
-        </button>
-      </form>
+
 
       <div style={{textAlign:'center',marginTop:4}}>
-        <button type="button" onClick={()=>{setStep(1);setOtp('');setError('');}}
+        <button type="button" onClick={()=>{setStep(1);setDevLink('');setEmailErr('');setError('');}}
           style={{fontFamily:"'DM Mono', monospace",fontSize:'0.59rem',color:'#2E3545',letterSpacing:'0.06em',background:'none',border:'none',cursor:'pointer',padding:0,transition:'color 0.18s'}}
           onMouseEnter={e=>e.currentTarget.style.color='#6E7A90'}
           onMouseLeave={e=>e.currentTarget.style.color='#2E3545'}>

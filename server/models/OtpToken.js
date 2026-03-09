@@ -1,5 +1,6 @@
 /**
- * OtpToken model — stores hashed OTPs for signup & password-reset flows.
+ * OtpToken model — stores hashed verification tokens for signup & password-reset links.
+ * pendingData holds temporary signup info (password + name) until email is verified.
  * TTL index auto-deletes expired documents.
  */
 
@@ -14,7 +15,7 @@ const otpSchema = new mongoose.Schema({
     trim: true,
     index: true,
   },
-  otpHash: {
+  otpHash: {          // stores bcrypt hash of the random verification token
     type: String,
     required: true,
   },
@@ -27,6 +28,11 @@ const otpSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  /** Temporary signup data stored until email is verified. Contains: { password, name } */
+  pendingData: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null,
+  },
   expiresAt: {
     type: Date,
     required: true,
@@ -36,14 +42,14 @@ const otpSchema = new mongoose.Schema({
 // MongoDB TTL: auto-removes the document after expiresAt
 otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-// Hash OTP before saving
-otpSchema.methods.setOtp = async function (plainOtp) {
-  this.otpHash = await bcrypt.hash(plainOtp, 8);
+// Hash a token before saving
+otpSchema.methods.setOtp = async function (plainToken) {
+  this.otpHash = await bcrypt.hash(plainToken, 8);
 };
 
-// Verify OTP and increment attempt counter
-otpSchema.methods.verifyOtp = async function (plainOtp) {
-  const match = await bcrypt.compare(plainOtp, this.otpHash);
+// Verify token
+otpSchema.methods.verifyOtp = async function (plainToken) {
+  const match = await bcrypt.compare(plainToken, this.otpHash);
   if (!match) this.attempts += 1;
   return match;
 };
