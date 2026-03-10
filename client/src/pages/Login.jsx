@@ -65,6 +65,15 @@ export default function Login() {
     } finally { setSubmitting(false); }
   };
 
+  /* ── Close forgot-password panel ── */
+  const closeFp = () => {
+    setFpStep(0);
+    setFpEmail('');
+    setFpDevLink('');
+    setFpEmailErr('');
+    setFpError('');
+  };
+
   /* ── FP Step 1: send reset link ── */
   const handleFpSendLink = async (e) => {
     e.preventDefault();
