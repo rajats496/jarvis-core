@@ -86,7 +86,14 @@ export default function Login() {
       if (res.emailError) setFpEmailErr(res.emailError);
       setFpStep(2);
     } catch (err) {
-      setFpError(err.response?.data?.error || 'Failed to send reset link.');
+      const isTimeout = err.code === 'ECONNABORTED';
+      const isNetwork = err.code === 'ERR_NETWORK';
+      const msg = err.response?.data?.error
+        || (isTimeout ? 'Server is waking up — please try again in 30 seconds.' : null)
+        || (isNetwork ? 'Cannot reach server. Check your connection or wait for backend to wake.' : null)
+        || err.message
+        || 'Failed to send reset link.';
+      setFpError(msg);
     } finally { setFpSubmitting(false); }
   };
 
