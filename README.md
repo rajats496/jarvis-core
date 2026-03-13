@@ -97,3 +97,11 @@ The desktop agent executes powerful root/admin-level scripts on your local machi
 - Integration with Cloudflare Tunnels.
 - Direct webcam captures and optical character recognition (OCR) over local UI elements.
 - Granular permissions per-command inside settings.
+
+## 🛟 Troubleshooting & Guides
+
+| Guide | Description |
+|-------|-------------|
+| [COPILOT_VSCODE_TROUBLESHOOTING.md](./COPILOT_VSCODE_TROUBLESHOOTING.md) | Resolve VS Code model picker issues for Sonnet/Opus models |
+| [CONVERSATION_SEARCH.md](./CONVERSATION_SEARCH.md) | How to use and extend the conversation search feature |
+| [USAGE_ANALYTICS.md](./USAGE_ANALYTICS.md) | Usage analytics feature overview and architecture |
